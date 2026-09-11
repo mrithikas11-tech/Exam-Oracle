@@ -1,0 +1,7 @@
+course,exam_id,exam_type,term,term_seq,session,date,total_points,coverage_from_session,coverage_to_session,cumulative,sealed
+FX.101,FX.101-quiz1-2020F,quiz1,2020F,20203,8,,30,1,7,false,false
+FX.101,FX.101-final-2020F,final,2020F,20203,20,,100,1,19,true,false
+FX.101,FX.101-quiz1-2021F,quiz1,2021F,20213,8,,30,1,7,false,false
+FX.101,FX.101-final-2021F,final,2021F,20213,20,,100,1,19,true,false
+FX.101,FX.101-quiz1-2022F,quiz1,2022F,20223,8,,30,1,7,false,false
+FX.101,FX.101-final-2022F,final,2022F,20223,20,,100,1,19,true,true

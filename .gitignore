@@ -1,2 +1,8 @@
 .env
 data/raw/
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+.local-backend/
+.pytest_cache/

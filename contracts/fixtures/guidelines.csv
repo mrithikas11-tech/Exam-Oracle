@@ -1,0 +1,3 @@
+course,guideline_id,kind,applies_to_exam_type,from_session,to_session,share,source_term,source_term_seq,source_session,text,source_url
+FX.101,G1,cumulative,final,,,,2022F,20223,1,The final exam is cumulative. (FIXTURE),
+FX.101,G2,emphasis_window,final,13,19,0.5,2022F,20223,1,"The final emphasizes material after Quiz 1, especially the last third. (FIXTURE)",

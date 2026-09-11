@@ -1,0 +1,5 @@
+course,hw_id,hw_term_seq,hw_session,exam_id,problem,exam_term_seq,exam_session,sim
+FX.101,FX.101-2022F-ps5-p1,20223,15,FX.101-final-2021F,1,20213,20,0.031
+FX.101,FX.101-2022F-ps5-p2,20223,15,FX.101-final-2020F,3,20203,20,0.029
+FX.101,FX.101-2022F-ps4-p2,20223,12,FX.101-final-2021F,4,20213,20,0.027
+FX.101,FX.101-2022F-ps6-p1,20223,18,FX.101-final-2020F,4,20203,20,0.012

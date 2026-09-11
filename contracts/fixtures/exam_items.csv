@@ -1,0 +1,20 @@
+course,exam_id,exam_type,term,term_seq,session,problem,points,topic_id,points_share,tag_source,text_clean
+FX.101,FX.101-quiz1-2020F,quiz1,2020F,20203,8,1,10,T01,10.0,human,synthetic problem 1 on T01
+FX.101,FX.101-quiz1-2020F,quiz1,2020F,20203,8,2,10,T02,10.0,human,synthetic problem 2 on T02
+FX.101,FX.101-quiz1-2020F,quiz1,2020F,20203,8,3,10,T03,10.0,human,synthetic problem 3 on T03
+FX.101,FX.101-final-2020F,final,2020F,20203,20,1,20,T04,20.0,human,synthetic problem 1 on T04
+FX.101,FX.101-final-2020F,final,2020F,20203,20,2,20,T05,10.0,human,synthetic problem 2 on T05
+FX.101,FX.101-final-2020F,final,2020F,20203,20,2,20,T06,10.0,human,synthetic problem 2 on T06
+FX.101,FX.101-final-2020F,final,2020F,20203,20,3,20,T06,20.0,human,synthetic problem 3 on T06
+FX.101,FX.101-final-2020F,final,2020F,20203,20,4,20,T07,20.0,human,synthetic problem 4 on T07
+FX.101,FX.101-final-2020F,final,2020F,20203,20,5,20,T02,20.0,human,synthetic problem 5 on T02
+FX.101,FX.101-quiz1-2021F,quiz1,2021F,20213,8,1,15,T02,15.0,human,synthetic problem 1 on T02
+FX.101,FX.101-quiz1-2021F,quiz1,2021F,20213,8,2,15,T03,15.0,human,synthetic problem 2 on T03
+FX.101,FX.101-final-2021F,final,2021F,20213,20,1,25,T06,25.0,human,synthetic problem 1 on T06
+FX.101,FX.101-final-2021F,final,2021F,20213,20,2,25,T07,12.5,human,synthetic problem 2 on T07
+FX.101,FX.101-final-2021F,final,2021F,20213,20,2,25,T08,12.5,human,synthetic problem 2 on T08
+FX.101,FX.101-final-2021F,final,2021F,20213,20,3,25,T04,25.0,human,synthetic problem 3 on T04
+FX.101,FX.101-final-2021F,final,2021F,20213,20,4,25,T05,25.0,human,synthetic problem 4 on T05
+FX.101,FX.101-quiz1-2022F,quiz1,2022F,20223,8,1,15,T02,15.0,human,synthetic problem 1 on T02
+FX.101,FX.101-quiz1-2022F,quiz1,2022F,20223,8,2,15,T03,7.5,human,synthetic problem 2 on T03
+FX.101,FX.101-quiz1-2022F,quiz1,2022F,20223,8,2,15,T01,7.5,human,synthetic problem 2 on T01
