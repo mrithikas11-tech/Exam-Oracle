@@ -1,0 +1,43 @@
+Running DAG play 'load-course' (10 steps)...
+
+load-course
+  run_id: run_20260911_213753.608_126
+
+  [layer 1]
+    index  ................................... restored (checkpoint)
+
+  [layer 2]
+    download  ................................ restored (checkpoint)
+
+  [layer 3]
+    extract  ................................. restored (checkpoint)
+
+  [layer 4]
+    split  ................................... restored (checkpoint)
+
+  [layer 5]
+    validate  ................................ restored (checkpoint)
+
+  [layer 6]
+    cognee  .................................. restored (checkpoint)
+    load  .................................... @127  (4.9s)
+
+  [layer 7]
+    tags  .................................... @128  (47ms)
+
+  [layer 8]
+    summary  ................................. @129  (1.1s)
+
+  [layer 9]
+    notify  .................................. @130  (35ms)
+
+  Summary: 4/10 completed, 0 failed, 0 blocked, 6 restored
+  Duration: (6.2s)
+# load-course 6.003
+6.003: 239 ledger rows from 73 documents in 19.7s (2 degraded, 2 sealed excluded, checks first try: true)
+Degraded:
+- cognee: Cognee ingest not wired/configured yet (role B); items written for later ingest
+- tags: no topic_tags.csv yet (Cognee tagging is role B); items stay _untagged
+- notify: ROCKETRIDE_WEBHOOK_URL not set; notification skipped
+
+---STDERR---

@@ -121,7 +121,7 @@ def run(args) -> int:
         try:
             resp = ocw_get(page_url, skip)
         except OracleError as err:
-            if "HTTP 404" in str(err):
+            if "HTTP 404" in str(err) or "too many redirects" in str(err):
                 pages_missing.append(page)
                 continue
             raise

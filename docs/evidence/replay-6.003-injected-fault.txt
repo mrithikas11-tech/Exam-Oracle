@@ -1,0 +1,47 @@
+Running DAG play 'load-course' (10 steps)...
+
+load-course
+  run_id: run_20260911_213739.553_47
+
+  [layer 1]
+    index  ................................... @48  (490ms)
+
+  [layer 2]
+    download  ................................ @49, @50, @51, @52, @53, @54, @55, @56, @57, @58, @59, @60, @61, @62, @63, @64, @65, @66, @67, @68, @69, @70, @71, @72, @73, @74, @75, @76, @77, @78, @79, @80, @81, @82, @83, @84, @85, @86, @87, @88, @89, @90, @91, @92, @93, @94, @95, @96, @97, @98, @99, @100, @101, @102, @103, @104, @105, @106, @107, @108, @109, @110, @111, @112, @113, @114, @115, @116, @117, @118, @119, @120, @121  (6.7s)
+
+  [layer 3]
+    extract  ................................. @122  (5.1s)
+
+  [layer 4]
+    split  ................................... @123  (70ms)
+
+  [layer 5]
+    validate  ................................ @124  (36ms)
+
+  [layer 6 — 2 parallel]
+    cognee  .................................. @125  (45ms)
+    load  .................................... FAILED  (@126 process exited with code 1; stderr: exam-oracle load: ledger catalog exam_oracle_ledger_unreachable not found; run `exam-oracle ledger-init` first; stderr artifact: .rote/artifacts/processes/@126/stderr.txt)  (497ms)
+      blocked: tags
+
+  [layer 7]
+    tags  .................................... BLOCKED  (upstream failed)
+
+  [layer 8]
+    summary  ................................. BLOCKED  (upstream failed)
+
+  [layer 9]
+    notify  .................................. BLOCKED  (upstream failed)
+
+  Summary: 6/10 completed, 1 failed, 3 blocked
+  Retry: rerun this play with --resume run_20260911_213739.553_47
+  Duration: (13.8s)
+# load-course 6.003
+FAILED: 6.003: load did not finish; load=failed, tags=blocked, summary=blocked, notify=blocked
+Steps not completed: load (failed), tags (blocked), summary (blocked), notify (blocked)
+Degraded:
+- cognee: Cognee ingest not wired/configured yet (role B); items written for later ingest
+
+---STDERR---
+
+error: 1 step(s) failed. To resume, rerun this play with --resume run_20260911_213739.553_47. Details: load: @126 process exited with code 1; stderr: exam-oracle load: ledger catalog exam_oracle_ledger_unreachable not found; run `exam-oracle ledger-init` first; stderr artifact: .rote/artifacts/processes/@126/stderr.txt
+

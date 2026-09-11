@@ -1,0 +1,60 @@
+schema_version = 2
+
+[[tools]]
+id = "exam-oracle"
+command = "exam-oracle"
+required = true
+
+[[tools.install]]
+manager = "uv"
+command = ["uv", "tool", "install", "git+https://github.com/mrithikas11-tech/Exam-Oracle"]
+
+[[tools.install]]
+manager = "pip"
+command = ["python3", "-m", "pip", "install", "git+https://github.com/mrithikas11-tech/Exam-Oracle"]
+
+[[tools]]
+id = "hotdata"
+command = "hotdata"
+required = true
+
+[[tools.install]]
+manager = "brew"
+package = "hotdata-dev/tap/cli"
+
+[[tools]]
+id = "pdftotext"
+command = "pdftotext"
+required = true
+
+[[tools.install]]
+manager = "brew"
+package = "poppler"
+
+[[tools.install]]
+manager = "apt"
+package = "poppler-utils"
+
+[[tools]]
+id = "pdftoppm"
+command = "pdftoppm"
+required = false
+
+[[tools.install]]
+manager = "brew"
+package = "poppler"
+
+[[tools]]
+id = "tesseract"
+command = "tesseract"
+required = false
+
+[[tools.install]]
+manager = "brew"
+package = "tesseract"
+
+[[readiness]]
+id = "hotdata-signed-in"
+tool = "hotdata"
+args = ["auth", "status"]
+timeout_ms = 10000

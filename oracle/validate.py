@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from .config import EXIT_INVALID, check_course, course_path, emit, log, read_report, save_report
+from .config import EXIT_INVALID, OracleError, check_course, course_path, emit, log, read_report, save_report
 
 TOLERANCE = 0.51
 
@@ -47,7 +47,10 @@ def check_exam(doc: dict, has_solution: bool) -> tuple[list[str], list[str]]:
 def run(args) -> int:
     course = check_course(args.course)
     problems_dir = course_path("work", course, "problems")
-    index = json.loads((course_path("work", course) / "index.json").read_text())
+    index_path = course_path("work", course) / "index.json"
+    if not index_path.exists():
+        raise OracleError(f"no index for {course}; run index first")
+    index = json.loads(index_path.read_text())
     previous = read_report(course, "validate") or {}
     attempts = previous.get("attempts", 0) + 1 if previous.get("load_started_at") == index["started_at"] else 1
     docs = {p.stem: json.loads(p.read_text()) for p in sorted(problems_dir.glob("*.json"))}
@@ -60,6 +63,8 @@ def run(args) -> int:
         hard += h
         soft += s
         (problems_dir / f"{doc_id}.json").write_text(json.dumps(doc, sort_keys=True, indent=1))
+    if exams == 0:
+        hard.append(f"{course}: no exams found; nothing to predict from")
     report = {"ok": not hard, "course": course, "exams": exams, "hard_faults": hard, "degraded": len(soft),
               "warnings": soft, "attempts": attempts, "load_started_at": index["started_at"]}
     if soft:
