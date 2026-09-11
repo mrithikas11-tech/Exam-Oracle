@@ -1,79 +1,81 @@
 # Role A — Loader: status, runbook, handoffs
 
-Built 2026-09-11 on the `person-a-loader` branch. Everything below was run and checked; numbers are measured.
+Branch `integration` = role A's loader merged with role B's model & memory (`person-b`). Everything below was run
+and checked on 2026-09-11; numbers are measured.
 
-## Task status (from `kit/05-build/timeline-and-roles.md`)
+## How the loader fits B's contract
+
+```
+index ─▶ download (×N, 4 at a time) ─▶ extract ─▶ split ─▶ validate ─┬─▶ items ─┐
+                                                                       └─▶ load  ─┤
+structure (data/courses/<course>/ → courses, topics, exams, lectures, guidelines) ┴─▶ tag (Cognee → exam_items) ─▶ summary ─▶ notify
+```
+
+| Step (`exam-oracle …`) | Writes | Notes |
+|---|---|---|
+| `index`, `download`, `extract`, `split`, `validate` | `$ORACLE_DATA_DIR/{raw,work}/<course>/` | OCW only; skip list = builtin + `data/courses/<c>/skip_list.txt`; exit 2 on a sealed URL/hash, 3 on bad numbering/points |
+| `structure` | `courses`, `topics`, `exams`, `lectures`, `guidelines` | from B's `data/courses/<c>/`; contract columns only; the sealed exam gets its `exams` row (metadata) and never any items |
+| `items` | `work/<c>/items.json` | B's tagger input: one item per exam problem (+ its solution text) |
+| `tag` | `exam_items` | runs `oracle.cognee_tag` (Cognee, strict topic list) and upserts its rows; degraded without `LLM_API_KEY`; `--dry-run` prices it |
+| `load` | `homework_items`, `homework_vec` | topics from the lectures each problem set covers (see decisions log) |
+| `summary` | `course_loads` | the "cheaper" chart (contract addition) |
+| `notify` | RocketRide webhook | degraded until `ROCKETRIDE_WEBHOOK_URL` is set |
+
+All writes go through `oracle.backend` (B): the local DuckDB ledger (`ORACLE_BACKEND=local`, default) or hotdata
+(`ORACLE_BACKEND=hotdata`, needs `HOTDATA_API_KEY` + `HOTDATA_WORKSPACE`).
+
+## Status
 
 | Task | Status | Evidence |
 |---|---|---|
-| Rote smoke test | Done | Record → export → lint → replay on a new course → injected fault → BLOCKED → `--resume` → called from Python `subprocess` (exit code checked). Registry `hello` Play not run (see decisions log). |
-| hotdata smoke test | Done | 50-row load 1.3 s; keyed upsert twice = 1 row; BM25 index ~1 s; vector index ~2 s; `bm25_search`, `vector_search`, RRF-fused CTE all return ranked rows; cross-database `--result-id` load: not supported (CLI: result must belong to the target database) |
-| Download all PDFs | Done | 6.641: 53 files, 6.003: 73, 2.71: 38 — hash-named under `$ORACLE_DATA_DIR/raw/<course>/`, manifests in `data/manifests/` |
-| Count 18.06 earlier finals | Done: **0** | The Spring 2010 Study Materials page has no PDFs → course 2 = **2.71 Optics** (1 final, but Quiz 1 in 2004F/2008S/2012S/2014S and Quiz 2 in 2009S/2012S/2014S → quiz-based runs) |
-| Generic split / check scripts | Done | `oracle/` — same code for all courses; exams split with points and printed totals; real exam dates read from the PDFs |
-| Record `load-course` on 6.641; export + lint | Done | Workspace `eo-load-course`, 10 recorded steps, 14.4 s; exported, generalised, `rote play lint` passes; `docs/traces/load-course-6.641-recording.html` |
-| hotdata ledger loads | Done | Ledger `exam_oracle_ledger` (see counts below) |
-| Replay on course 2; log cost | Done | 2.71 replay: 10/10 steps, 11.2 s, 0 model tokens; row in `ledger.course_loads`; `docs/evidence/replay-2.71.txt` |
-| Replay on 6.003 with skip list; resume moment | Done | 2 sealed resources excluded; first run with a **deliberately injected** fault (ledger catalog pointed at a non-existent name) → `load` FAILED with evidence, `tags`/`summary`/`notify` BLOCKED; fixed; `--resume` restored 6 steps and ran 4; `docs/evidence/replay-6.003-*.txt`; `docs/traces/load-course-replays-2.71-6.003.html` |
-| Publish `load-course`; export trace | Released locally + traces exported. **Registry push waiting for approval** (it publishes to the Rote catalog and needs a Rote handle). |
-| `run-backtest` Play | Not started — role B records it (`kit/05-build/timeline-and-roles.md`, 2:00–3:00) |
+| Rote + hotdata smoke tests | Done | see `kit/07-reference/decisions-log.md` (G0 answers) |
+| Download all PDFs; 18.06 count | Done | 164 PDFs (6.641 53, 6.003 73, 2.71 38); 18.06 has 0 earlier finals → course 2 = **2.71** (confirmed) |
+| Generic split/check scripts | Done | `oracle/` |
+| `load-course` Play: record, export, lint, replay, resume | Done | `plays/load-course/` (v0.1.2 = the integrated graph), `docs/traces/`, `docs/evidence/` |
+| Integration with B's contract | Done | merged branch, B's 120 tests pass; `data/courses/2.71/` drafted (B to verify) |
+| Cognee tagging (with B's tagger) | Priced (~$3.06 for 95 problems) and run live — results below | |
+| hotdata as the live ledger | **Waiting for a hotdata API key** (B's backend uses the SDK, not the CLI login) | |
+| RocketRide notify | **Waiting** — the extension is installed but not signed in to a folder on this machine | |
+| Publish `load-course` to the catalog | Waiting for your go-ahead (needs a Rote handle or org) | |
 
-## Ledger contents after the loads
+## Ledger after the integrated loads (local backend)
 
-| Table | 6.641 | 2.71 | 6.003 |
+| | 6.641 | 2.71 | 6.003 |
 |---|---|---|---|
-| `exam_items` (one row per problem until tagged) | 23 (7 exams) | 20 (8 exams) | 52 (10 exams) |
-| `homework_items` / `homework_vec` | 35 | 29 | 81 |
-| `lectures` | 19 | 12 | 25 |
-
-`course_loads`: 6.641 agent 14.4 s · 2.71 replay 11.2 s · 6.003 replay 19.7 s (includes the pause before the resume) · 6.641 replay 8.2 s (post-release smoke run; downloads cached from the recording).
-Every exam's points sum to its printed total (or 100 when points are percentages/unprinted → `points_source=equal`).
-No row, text or metadata for `6.003-final-2011F` exists anywhere.
+| exams (incl. sealed metadata row) | 10 | 8 | 12 (1 sealed) |
+| lectures / topics / guidelines | 25 / 19 / 6 | 25 / 18 / 0 | 25 / 19 / 3 |
+| exam problems handed to the tagger | 23 | 20 | 52 |
+| homework problems → homework_items rows | 30 → 68 | 29 → 68 | 81 → 129 |
 
 ## Runbook
 
 ```bash
-brew install poppler hotdata-dev/tap/cli && hotdata auth login
-uv tool install git+https://github.com/mrithikas11-tech/Exam-Oracle
-export ORACLE_DATA_DIR=~/exam-oracle-data
+brew install poppler                                  # pdftotext
+uv tool install --force --editable <your checkout>    # exam-oracle + B's modules; editable so data/courses and contracts are found
+export ORACLE_DATA_DIR=~/exam-oracle-data             # raw/ and work/
+export ORACLE_LOCAL_DIR=~/exam-oracle-data/local-backend   # local ledger + Cognee storage (or ORACLE_BACKEND=hotdata)
+# LLM_API_KEY goes in <checkout>/.env (git-ignored)
 exam-oracle ledger-init
 cp -R plays/load-course ~/.rote/flows/
-cd /tmp && rote play run load-course course=6.003 course_url=https://ocw.mit.edu/courses/6-003-signals-and-systems-fall-2011/
-# after a failure: fix, then repeat the same command with --resume <run_id> (params are required again)
+cd /tmp && rote play run load-course course=2.71 course_url=https://ocw.mit.edu/courses/2-71-optics-spring-2014/
 ```
 
-Individual steps are also plain commands: `exam-oracle index|download|extract|split|validate|load|cognee|tags|summary|notify --course <c>`.
-Every command prints one JSON object and uses the kit's exit lanes: 0 ok (a `warning` field = degraded),
-1 hard fault, 2 sealed URL/hash, 3 validation failed.
-
-**Resume demo on stage:** `HOTDATA_LEDGER_CATALOG=exam_oracle_ledger_unreachable rote play run load-course course=… course_url=…`
-→ BLOCKED; then the same command without the variable plus `--resume <run_id>`. Say it is injected.
-A genuine alternative: 18.01 (Fall 2006) has 14 scanned exam PDFs; `validate` exits 3 on them, and
-`exam-oracle extract --course 18.01 --ocr auto` (tesseract) is the repair step.
+Every command prints one JSON object; exit 0 ok (a `warning` = degraded), 1 hard fault, 2 sealed, 3 validation.
+After a failure: fix, then re-run the same command with `--resume <run_id>` (parameters are required again).
 
 ## Handoffs
 
-**To B (Cognee / HydraDB / signals):**
-- Items to tag: `$ORACLE_DATA_DIR/work/<course>/cognee_items.jsonl` — one item per exam problem (+ its solution text),
-  homework problem and lecture; `node_set = [course, term, doctype]`; ids match the ledger keys.
-- Wire Cognee by adding `oracle/cognee_ingest.py` with `remember_items(items, dataset_name, dry_run) -> dict`;
-  the `cognee` step calls it when `LLM_API_KEY` or `COGNEE_BASE_URL` is set (a raise = hard fault).
-- Write tags to `$ORACLE_DATA_DIR/work/<course>/topic_tags.csv` (`item_id,topic`, one row per topic);
-  `exam-oracle tags --course <c>` then upserts `(problem, topic)` rows with points split equally and deletes the `_untagged` rows.
-- Ledger keys are declared for your tables too: `runs(run_id)`, `predictions(run_id, topic)`, `guidelines(guideline_id)`,
-  `guideline_tests(guideline_id, run_id)`, `students(student_id)`. Load with `hotdata databases load --catalog exam_oracle_ledger --table <t> --file <csv> --mode upsert`.
-- Leakage: every row has an ISO `date` (from the exam PDF where printed — `date_source` in the manifests); build `run-<id>` databases from `date < target`.
+**To B:**
+- `structure` reads your `data/courses/<c>/` files exactly as committed; `topics.first/last_session` fill the contract's `first/last_lecture`.
+- `data/courses/2.71/` is A's draft in your format — please verify, and add 2.71 rows to the real run list (run_seq 4–6).
+- Homework topics are structural (lecture window of each set); replace with Cognee tags if you prefer — `load` is the only writer.
+- `course_loads` was added to the contract (+ key, README line, fixture).
 
-**To C (RocketRide):**
-- Set `ROCKETRIDE_WEBHOOK_URL` and `ROCKETRIDE_WEBHOOK_KEY`; `notify` POSTs
-  `{"event":"course-loaded","course":…,"summary":{…course_loads row…},"validate":{…}}`.
-  The auth header defaults to `Authorization: Bearer <key>` — override with `ROCKETRIDE_WEBHOOK_AUTH_HEADER` once you see the node's convention.
-- Dashboard "cheaper" chart: `SELECT * FROM exam_oracle_ledger.public.course_loads`.
+**To C (dashboard):** `SELECT * FROM {{course_loads}}` for the "cheaper" chart; `runs` for the other two. The `notify`
+payload is `{"event":"course-loaded","course":…,"summary":{…},"validate":{…}}`.
 
 ## Known limits
 
-- Topic tags are empty until B's Cognee step runs (items carry `topic = _untagged`).
-- The 6.641 recording's agent reasoning tokens were not measured (`agent_tokens = -1`); replays use no model tokens.
-- Homework and lecture dates are assumed from the term start (`oracle/config.py`); exam dates come from the PDFs except
-  6.641 Final 2008/2009 and 2.71 Quiz 1 2004F/2008S, Quiz 2 2009S (assumed; fill `oracle/exam_dates.csv` if the labeler finds them).
+- The 6.641 recording's agent tokens were not measured (`agent_tokens` NULL).
+- Homework/lecture dates for the ledger come from B's structure files; exam dates from the PDFs or B's files.
 - Skip-list hashes of the sealed PDFs are not filled in — only a human with the sealed folder should add them.

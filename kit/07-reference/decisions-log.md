@@ -79,3 +79,20 @@ Append new entries at the bottom: time, decision, why, who. Entries below were m
 | 14:40 | `deps.toml` declares install candidates and a hotdata sign-in readiness check | `rote play release` blocks sharing without them | A |
 | 14:40 | Cognee and RocketRide steps are degraded (exit 0 + warning) until B/C wire them | Seams: `oracle/cognee_ingest.remember_items`, `topic_tags.csv`, `ROCKETRIDE_WEBHOOK_URL` | A |
 | 14:40 | Agent reasoning tokens for the 6.641 recording not measured (`agent_tokens = -1`) | No per-run token command; rote trace "tokens" measure captured responses, not model tokens | A |
+
+## Integration — role A with role B's contract, 2026-09-11 (evening)
+
+| Time (PT) | Decision | Why | Who |
+|---|---|---|---|
+| 15:20 | Course 2 = **2.71** confirmed by the product owner; `data/courses/2.71/` drafted by A in B's format from the OCW Calendar/Syllabus/Exams/Assignments pages (assumptions A1, S-SESSION, S-EXAM, S-SYNTH, W-FINAL, H-SETS, T-LIST in its course.json) | B's structure files existed for 6.641/6.003/18.06 only. **B to verify.** B's `data/run_lists/REAL_TEMPLATE.csv` still reserves run_seq 4–6 for course 2 and was not edited (a B test pins its rows) | A |
+| 15:25 | Branches merged into `integration`: B's `oracle/config.py` kept; A's loader config renamed `oracle/loader_config.py`; kit/.env.example/.gitignore conflicts merged | Both roles had created an `oracle` package | A |
+| 15:25 | The loader now writes **B's contract** through `oracle.backend` (local DuckDB or hotdata SDK), replacing A's hotdata-CLI tables (`exam_oracle_ledger` catalog is obsolete) | One ledger shape for A, B and C | A |
+| 15:25 | New loader steps: `structure` (courses/topics/exams/lectures/guidelines from `data/courses/<c>/`, contract columns only; topics.first/last_session → first/last_lecture), `items` (B's tagger input, problem + solution text), `tag` (runs `oracle.cognee_tag`, upserts `exam_items`), `load` (homework), `summary` | B's commit named these files as "A's loader reads" them | A |
+| 15:25 | **homework_items topics come from course structure:** a set covers the lectures from its issued session (else the previous set's due session) up to its due session; each problem gets those lectures' topics. Sets without a due session (6.641 `opt`) are skipped | `topic_id` is NOT NULL and B's tagger handles exam problems only. **B may replace this with Cognee tags** | A |
+| 15:25 | `homework_vec` (no key) is replaced with every other course's rows kept | A replace per course would wipe the other courses | A |
+| 15:30 | **Contract addition:** `course_loads` (key `load_id`) + fixture | The "cheaper" chart needs per-course load cost; `runs` covers backtests only | A |
+| 15:30 | Per-course skip lists: the loader also reads `data/courses/<c>/skip_list.txt` (B's 6.003 list adds the PDF, zip and mirror URLs) | Stronger sealing | A |
+| 15:35 | Cognee tagging priced first (`dry_run=True`): 95 exam problems ≈ **$3.06**, 1.8 M tokens (gpt-5-mini; Cognee warns it can vary several-fold); then run live | BUILDER-RULES §12 | A |
+| 15:35 | Ledger runs on the **local DuckDB backend** (`ORACLE_LOCAL_DIR`) until a hotdata API key exists: B's backend uses `hotdata-framework` (`HOTDATA_API_KEY`, `HOTDATA_WORKSPACE`), not the CLI login | No hotdata API key on this machine yet | A |
+| 15:35 | RocketRide back in scope (product owner); the extension (1.3.0) is installed but not signed in to any folder on this machine, so `notify` stays degraded | The extension writes `ROCKETRIDE_URI`/`ROCKETRIDE_APIKEY` into the opened folder's `.env` (extension docs) | A |
+

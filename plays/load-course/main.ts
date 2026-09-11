@@ -4,12 +4,12 @@
  * ---
  * name: load-course
  * source: https://github.com/mrithikas11-tech/Exam-Oracle
- * description: 'Load one MIT OpenCourseWare course into Exam Oracle: index its exams, solutions, problem sets and lecture notes; download each PDF hash-named (sealed exams refused, exit 2); extract text; split exams into numbered problems with points; validate numbering and point totals (hard fault, exit 3); upsert everything into the hotdata ledger; hand items to Cognee for topic tagging; append a course_loads row; notify RocketRide. Needs the exam-oracle CLI (pip/uv install of github.com/mrithikas11-tech/Exam-Oracle) and a hotdata login.'
+ * description: 'Load one MIT OpenCourseWare course into Exam Oracle: index its exams, solutions, problem sets and lecture notes; download each PDF hash-named (sealed exams refused, exit 2); extract text; split exams into numbered problems with points; validate numbering and point totals (hard fault, exit 3); load the course structure (data/courses/<course>/) and homework into the ledger (contracts/ledger-schema.sql); tag exam problems onto the fixed topic list with Cognee; record a course_loads row; notify RocketRide. Needs the exam-oracle CLI from github.com/mrithikas11-tech/Exam-Oracle (set ORACLE_REPO_ROOT to a checkout unless installed editable), ORACLE_DATA_DIR, and LLM_API_KEY for tagging.'
  * provenance:
  *   author: mrithikas11@gmail.com
  * metadata:
  *   rote_version: 0.82.0
- *   version: 0.1.1
+ *   version: 0.1.2
  *   status: released
  *   kind: atomic
  *   flow_type: parallel
@@ -88,24 +88,28 @@
  *     depends_on: [split]
  *     argv: [exam-oracle, validate, --course, $course]
  *     timeout_ms: 60000
+ *   structure:
+ *     type: process.exec
+ *     argv: [exam-oracle, structure, --course, $course]
+ *     timeout_ms: 300000
+ *   items:
+ *     type: process.exec
+ *     depends_on: [validate]
+ *     argv: [exam-oracle, items, --course, $course]
+ *     timeout_ms: 120000
+ *   tag:
+ *     type: process.exec
+ *     depends_on: [items, structure]
+ *     argv: [exam-oracle, tag, --course, $course]
+ *     timeout_ms: 3600000
  *   load:
  *     type: process.exec
- *     depends_on: [validate]
+ *     depends_on: [validate, structure]
  *     argv: [exam-oracle, load, --course, $course]
- *     timeout_ms: 600000
- *   cognee:
- *     type: process.exec
- *     depends_on: [validate]
- *     argv: [exam-oracle, cognee, --course, $course]
- *     timeout_ms: 1800000
- *   tags:
- *     type: process.exec
- *     depends_on: [load, cognee]
- *     argv: [exam-oracle, tags, --course, $course]
  *     timeout_ms: 600000
  *   summary:
  *     type: process.exec
- *     depends_on: [tags]
+ *     depends_on: [tag, load]
  *     argv: [exam-oracle, summary, --course, $course, --mode, $mode]
  *     timeout_ms: 300000
  *   notify:
@@ -192,9 +196,10 @@ const handles = {
   extract: ctx.step(stepName("extract")),
   split: ctx.step(stepName("split")),
   validate: ctx.step(stepName("validate")),
+  structure: ctx.step(stepName("structure")),
+  items: ctx.step(stepName("items")),
+  tag: ctx.step(stepName("tag")),
   load: ctx.step(stepName("load")),
-  cognee: ctx.step(stepName("cognee")),
-  tags: ctx.step(stepName("tags")),
   summary: ctx.step(stepName("summary")),
   notify: ctx.step(stepName("notify")),
 };
@@ -229,7 +234,7 @@ const headlinePrefix = (() => {
 })();
 
 const headline = summary
-  ? `${headlinePrefix}${course}: ${summary.items} ledger rows from ${summary.docs} documents in ` +
+  ? `${headlinePrefix}${course}: ${summary.items} problems loaded (${summary.exam_items_rows ?? 0} tagged exam rows) from ${summary.docs} documents in ` +
     `${summary.seconds}s (${summary.degraded} degraded, ${summary.sealed_excluded} sealed excluded, ` +
     `checks first try: ${summary.checks_first_try})`
   : `${headlinePrefix}${course}: load did not finish; ` +
