@@ -100,15 +100,27 @@ def check() -> dict:
     model = env.get("LLM_MODEL") or "openai/gpt-5-mini"
     bare = model.split("/", 1)[1] if model.startswith(f"{provider}/") else model
     litellm_provider = "openai" if provider == "custom" else provider
-    import litellm
+    from .tag import run_captured  # litellm prints help banners to stdout; keep this command's one JSON line
 
-    try:
-        litellm.completion(model=f"{litellm_provider}/{bare}", messages=[{"role": "user", "content": "Reply OK."}],
-                           max_tokens=256, api_key=env.get("LLM_API_KEY") or None,
-                           api_base=env.get("LLM_ENDPOINT") or None, timeout=60)
-    except Exception as err:  # report the provider's error class and message, never the key
-        message = str(err).replace(env.get("LLM_API_KEY") or "\0", "<key>")[:300]
-        return {"ok": False, "provider": provider, "model": model, "error": type(err).__name__, "detail": message}
+    outcome: dict = {}
+
+    def call() -> int:
+        import litellm
+
+        litellm.suppress_debug_info = True
+        try:
+            litellm.completion(model=f"{litellm_provider}/{bare}", messages=[{"role": "user", "content": "Reply OK."}],
+                               max_tokens=256, api_key=env.get("LLM_API_KEY") or None,
+                               api_base=env.get("LLM_ENDPOINT") or None, timeout=60)
+        except Exception as err:  # report the provider's error class and message, never the key
+            outcome["error"] = type(err).__name__
+            outcome["detail"] = str(err).replace(env.get("LLM_API_KEY") or "\0", "<key>")[:300]
+            return 1
+        return 0
+
+    code, _, _ = run_captured(call)
+    if code != 0:
+        return {"ok": False, "provider": provider, "model": model, **outcome}
     return {"ok": True, "provider": provider, "model": model}
 
 
