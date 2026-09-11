@@ -1,0 +1,101 @@
+{
+  "course": "18.06",
+  "title": "Linear Algebra",
+  "ocw_url": "https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/",
+  "published_term": "2010S",
+  "published_term_seq": 20101,
+  "instructor": "Prof. Gilbert Strang",
+  "calendar_has_real_dates": false,
+  "assumptions": [
+    {
+      "id": "A1",
+      "text": "exam_type by position: the first in-term exam (Quiz 1 / Exam 1 / Hour Exam I) -> quiz1, second -> quiz2, third -> quiz3, Final -> final. 18.06 papers are headed 'Quiz N' but listed as 'Exam N'; both map by position. Makeup/conflict papers would collapse into their slot (none occur in this corpus). Practice papers are never exams."
+    },
+    {
+      "id": "A-TOPIC",
+      "text": "The topic list (T01-T15) is course structure shared by all terms, built only from the 2010S calendar titles, the Readings page's 4th-ed. sections and the syllabus Goals list, applying the verifier's topic_list_issues: PA = LU kept with LU, Gram-Schmidt merged into orthogonality, Markov into eigenvalues, similar matrices with the SVD, names use calendar wording. The grouping (ids, names, sessions) was written before any 2010 exam file was opened (first topics.csv sha256 = 97984b25799bef8fe0279f33765a8cb7d739c0e98ab45bbc2da5b2d15233b484). After the verifier's review the T02 and T04 grounding cells gained a tagging rule taken only from the SES 8/9 calendar titles and the syllabus Goals; no id, name or session changed. Current topics.csv sha256 = ae204ce67a7b856d8b8aa2f0973cbf7b26ca88f963bfa9fabe0ab7758e9d50f0. For earlier terms it only labels exam problems and must never build x2/x4 for them. Disclosure (trap T6): while applying the research corrections B read the extraction's 'uncertainties' field, which describes the 2010 Final's problems. The grouping follows the verifier and lead instructions and every topic cites pre-exam grounding, but the exposure is real. B's split-out scratch copies (e_uncertainties.json, v_checks.json) were deleted unread; the field still sits in the research task output and must be stripped before any load. A teammate who has not read it can audit the list."
+    },
+    {
+      "id": "A-T00",
+      "text": "T00 'Off-list (not in topic list)' exists for scoring only: never predicted, no sessions, but exam points tagged T00 stay in the scoring denominator. The file set cannot enforce this: the ledger topics table has no predictable flag, and rank_and_seal requires a signal row for every loaded topic, so a loaded T00 would be ranked (x1 can count T00 tags on x1 papers; zero-signal ties favour the lowest id) and would inflate N in K/N and Brier. Until the contract gains the flag, identify it by topic_id = 'T00' (taught_in_published_term=false alone is not enough: 6.641 uses it for real topics not taught in 2009) and keep it out of ranking, K and Brier, but not out of the score denominator."
+    },
+    {
+      "id": "A-T02",
+      "text": "T02 is the only non-contiguous topic (SES 4, 5, 8). first_session/last_session are bounds (T02 4-8 overlaps T03 6-7 by design, following the lead's 'keep PA=LU with LU'); lecture_ns (';'-separated) and sessions.csv topic_id are authoritative. Compute x2/x4 from sessions.csv, never from the range. Any consumer that reads a range must use lecture_ns: x7_professor_said.sql falls back to [first_lecture, last_lecture] only for a topic with no visible lectures, which never happens to T02 here (SES 4-5 precede every 2010S exam, and 18.06 has no exam_history target). SES 8 and SES 9 share the 3.3-3.4 reading; the TAGGING RULE in the T02/T04 grounding splits them by calendar title."
+    },
+    {
+      "id": "A-SES",
+      "text": "sessions.csv uses the calendar SES # (1-40) of 2010S; lecture_n = SES # (the calendar numbers sessions only). 34 content rows, one topic each. Review sessions 24 ('Review for exam 2') and 36 ('Course review') are is_review=true rows with empty topic_id and lecture_n (structure only, not lecture rows). LOADER RULE: skip is_review=true rows when building the ledger lectures table. x4_lecture_time.sql counts every lecture row in the window, topic-less ones included, so loading them would change Exam 3's x4 denominator (window 1-34: 31 -> 32) and the Final's (1-39: 34 -> 36). The rule matches 6.003 F11 and 6.641 S09, whose calendars have no review-only sessions. Exam sessions 12, 25, 37, 40 have no row. Instructor Insights says '38 sessions total' against 40 calendar rows; the calendar is used. Session dates are blank: the calendar states none."
+    },
+    {
+      "id": "A-EXSES",
+      "text": "Each 2010S exam occupies its own calendar row, so exam.session = 12, 25, 37, 40 (session_source=calendar). date = paper header, informational only. Exam 3's header 'May 8, 2010' is a Saturday, against the syllabus 'at class times'; the pset due dates fit a Mon/Wed/Fri schedule that puts SES 37 on Fri 7 May 2010. The session index is authoritative."
+    },
+    {
+      "id": "A-HW",
+      "text": "Homework visibility uses the DUE session (conservative): set due at s is visible to exam session S iff s < S. Due sessions are the calendar markers (5, 8, 11, 14, 17, 20, 23, 29, 31, 34). The pset PDFs state 'Due Thursday, <date> 2010 at 4pm'; each Thursday falls just before its marked (Friday) session, which is consistent. No source states when sets were issued, so issued_session is blank. So PS1-3 are visible to Exam 1, PS1-7 to Exam 2, PS1-10 to Exam 3 and the Final."
+    },
+    {
+      "id": "A-SYN",
+      "text": "Exams from other terms have no calendar: session is a synthetic ordinal that only orders exams within their term (quiz1=1000, quiz2=2000, quiz3=3000, final=9000), session_source=synthetic. Cross-term visibility is decided by term_seq alone."
+    },
+    {
+      "id": "A-COV",
+      "text": "Quiz coverage windows come from the calendar rows 'Exam 1: Chapters 1 to 3.4' -> SES 1-9, 'Exam 2: Chapters 1-5, 6.1-6.2, 8.2' -> SES 1-22, 'Exam 3: Chapters 1-8 (8.1, 2, 3, 5)' -> SES 1-34, mapped with the Readings page's 4th-ed. sections. The rows are ASSUMED posted at term start (source_session=1, trap T4); OCW gives no posting date. share=1.0 means the row claims the whole exam lies in the window."
+    },
+    {
+      "id": "A-COV-GAPS",
+      "text": "Taught before an exam but outside its stated window: Exam 1 omits SES 10-11 (3.5-3.6); Exam 2 omits SES 23 (Markov, 8.3; SES 24 is a review); Exam 3 omits SES 35 (linear programming, 8.4) and the 10.2-10.3 part of SES 32. Whole sessions carry one topic, so SES 32 counts as inside the Exam 3 window."
+    },
+    {
+      "id": "A-FINAL",
+      "text": "No page states the Final's coverage: cumulative=true is an ASSUMPTION and coverage_from/to_session are NULL (the schema reserves them for stated windows). Exams 2 and 3 are cumulative by statement (their windows start at Chapter 1). Exam 1 is written cumulative=false (first exam of the term), as the 6.003 and 6.641 quiz targets are; run_context maps NULL to the same value, so this only aligns the files. x1 quiz rows stay NULL (unknown), as in the other courses."
+    },
+    {
+      "id": "A-X1BOUND",
+      "text": "x1 corpus cut rule: walk archive terms before 2010S in term_seq order, newest first; a term qualifies if its archive exam page links at least one real (non-practice) exam paper with problem statements; keep the first 8 qualifying terms: 2009F, 2009S, 2008F, 2008S, 2007F, 2007S, 2006F, 2006S. Every real paper of those terms is included (27: quiz1 x8, quiz2 x7, quiz3 x7, final x5); no paper from 2005F or earlier. Alternative reading (8 papers per slot) would add 2005F quiz2/quiz3/final, 2005S final and 2004S final; not adopted."
+    },
+    {
+      "id": "A-X1-FILES",
+      "text": "2007S papers are single 'with Solutions' files: problems_url = solutions_url; A must strip the solution text. Page-1 text of 2006F Exam 3 and Final, 2008F Final, 2008S Exams 1-2 and 2006S Exam 1 is unreadable by pdftotext (Type-3 fonts): OCR needed, and their dates are blank. No x1 cover prints a numeric total, so total_points is blank and A sums the problem points."
+    },
+    {
+      "id": "A-AVAIL",
+      "text": "An exam given before the target is assumed available to students (OCW Exams page: 'Exams and quizzes from previous years can be found in the study materials section.'; the archive is public)."
+    },
+    {
+      "id": "A-INSTR",
+      "text": "The x1 corpus mixes instructors (trap T10): 2009F Postnikov, 2009S Johnson, 2008F Edelman, 2008S Strang, 2007F Johnson, 2007S unnamed, 2006F Strang, 2006S Edelman (names from old.shtml). The 2010S targets are Strang's."
+    },
+    {
+      "id": "A-DELTA",
+      "text": "x1 recency Delta counts course offerings (spring and fall terms both count): 2009F = 1 offering before 2010S, 2006S = 8."
+    },
+    {
+      "id": "A-LATER",
+      "text": "No term after Spring 2010 appears anywhere (trap T7): Spring 2011-2015 and Fall 2010+ archive terms, 18.06SC Fall 2011, and the 2023 'Final 18.06 Lecture' page (it includes a final-exam review) are excluded."
+    },
+    {
+      "id": "A-PRACTICE",
+      "text": "Practice papers are never exams and are not listed: 2007F Practice Exam 3 and Practice Final, 2009S practice items for Exams 1-3. They are not used as guidance either: none is 2010S material."
+    },
+    {
+      "id": "A-HWTEXT",
+      "text": "2010S problem sets are textbook exercises (Strang, Introduction to Linear Algebra, 4th ed.). The archive pset PDFs (problems_url) list only exercise numbers, due date and point rule; the OCW solution PDFs (solutions_url, on the ocw.mit.edu allowlist) restate each problem before its solution (checked PS1 and PS7). A should take homework text from the solution PDFs, keeping only each problem statement. Solution release timing is unknown (trap T3); x3 uses statements only."
+    },
+    {
+      "id": "A-VIDEO",
+      "text": "The OCW lecture videos are Fall 1999 recordings with different numbering. They are not 2010S lecture material and are not mapped to sessions."
+    },
+    {
+      "id": "A-NOSEAL",
+      "text": "18.06 has no sealed exam, so skip_list.txt is intentionally empty. All four 2010S exams are FULL backtest targets. Labellers should still open them outside the repo (sealing rule 1)."
+    },
+    {
+      "id": "A-FORMAT",
+      "text": "CSV conventions: booleans 'true'/'false'; empty cell = NULL; lecture_ns is ';'-separated; ids use [A-Za-z0-9._-]; guideline_id is course-prefixed because the ledger key is guideline_id alone."
+    }
+  ],
+  "sources_note": "Fetched 2026-09-11 by Person B. sessions.csv/topics.csv: OCW calendar (https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/pages/calendar/) titles verbatim, 40 SES rows, no dates; 4th-ed. section mapping from the Readings page (https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/pages/readings/); topic grounding also from the syllabus Goals list (https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/pages/syllabus/). exams.csv: 2010S papers and solutions are OCW direct PDF links resolved from the Exams page resource pages (https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/pages/exams/), each checked HTTP 206 application/pdf with %PDF magic by a 1 KB range request (no 2010 exam content was read, except the numbers-only cover-total check); dates are the paper headers reported by the verified research. x1 papers: hrefs from the archive term pages (https://web.mit.edu/18.06/www/<Term>/exams*.html, linked from https://web.mit.edu/18.06/www/old.shtml), each downloaded (HTTP 200 application/pdf) or range-checked; dates read from page-1 headers where the text layer is readable. homework_sets.csv: due sessions from the calendar 'Problem set N due' markers; pset PDFs from https://web.mit.edu/18.06/www/Spring10/psetsS10.html (the 10th entry is mislabelled 'Pset 8' but links pset10-s10.pdf); solutions are OCW direct PDFs from the Assignments page (https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/pages/assignments/). guidelines.csv: verbatim calendar rows 12/25/37 and the syllabus Exams paragraph. Research file corrections applied: Fall 2003 Final has no solutions and 12 (not 13) earlier finals have solutions (outside this corpus anyway); OCW hosts 18.06SC Fall 2011 (later term, excluded by T7); the OCW final-solutions resource is titled 'Final exam with solutions'; Fall 2009 Exam 2's archive href 'exam2.pdf.pdf' returns 404 (the research marked it confirmed) - the paper is at Fall09/exam2.pdf (fetched: header 'Quiz 2, October 26, 2009'); Spring 2006 lists only Exam 1 (its Exam 2/3/Final links sit in an HTML comment and 404). Verifier round, 2026-09-11: quiz1-2010S cumulative written 'false'; T02/T04 tagging rule added; T00 and review-row loader rules made explicit (A-T00, A-SES); B's scratch copies of the research 'uncertainties' and verification 'checks' fields deleted unread; visibility re-checked mechanically.",
+  "license": "OCW 18.06 Spring 2010 pages and PDFs (calendar, readings, syllabus, assignments, exams, pset solutions): MIT OpenCourseWare, CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/); credit 'MIT OpenCourseWare'. The web.mit.edu/18.06 archive (x1 exam papers 2006S-2009F and the 2010S pset PDFs) is NOT OCW, states no Creative Commons license, and is outside the ocw.mit.edu allowlist (oracle.config.validate_ocw_url refuses it): fetching those URLs needs an explicit team decision."
+}

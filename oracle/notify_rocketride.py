@@ -10,7 +10,7 @@ import json
 import os
 from urllib.parse import urlparse
 
-from .config import USER_AGENT, check_course, course_path, emit, read_report
+from .loader_config import USER_AGENT, check_course, course_path, emit, read_report
 
 
 def add_args(p):

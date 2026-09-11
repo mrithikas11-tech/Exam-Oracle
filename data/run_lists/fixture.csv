@@ -1,0 +1,8 @@
+# Fixture run list for the SYNTHETIC course FX.101 (contracts/fixtures; published term 2022F).
+# Run: python -m oracle.run_list --list data/run_lists/fixture.csv   (after the fixture ledger and echo_pairs exist)
+run_seq,course,target_exam,cold_start,feature_set,note
+1,FX.101,FX.101-quiz1-2021F,false,exam_history,earlier term: only x1 and x7 (the published term's lectures are in its future)
+2,FX.101,FX.101-final-2021F,false,exam_history,earlier term
+3,FX.101,FX.101-quiz1-2022F,false,full,first run in the published term: all seven signals
+4,FX.101,FX.101-quiz1-2022F,true,full,cold-start twin of run 3 (blank weights; no refit and no lessons version)
+5,FX.101,FX.101-final-2022F,false,full,the fixture's sealed reveal (exams.sealed = true; its key is in contracts/fixtures/sealed)

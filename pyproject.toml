@@ -4,10 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "exam-oracle"
-version = "0.1.0"
-description = "Exam Oracle loader: generic OCW -> hotdata/Cognee scripts driven by Rote Plays"
+version = "0.2.0"
+description = "Exam Oracle: OCW loader (role A) and model & memory (role B)"
 requires-python = ">=3.10"
-dependencies = ["requests>=2.32,<3"]
+dependencies = [
+    "requests>=2.32,<3",
+    "cognee==1.5.4",
+    "duckdb==1.5.5",
+    "hotdata==0.9.1",
+    "hotdata-framework==0.14.0",
+    "hydradb-sdk==2.1.4",
+    "jsonschema==4.26.0",
+    "pandas==3.0.5",
+    "pyarrow==25.0.1",
+    "rdflib==7.1.4",
+    "scikit-learn==1.9.1",
+]
 
 [project.scripts]
 exam-oracle = "oracle.cli:main"

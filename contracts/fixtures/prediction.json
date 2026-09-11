@@ -1,0 +1,165 @@
+{
+  "baselines": {
+    "even": [
+      "T06",
+      "T02",
+      "T04",
+      "T05"
+    ],
+    "last_exam": [
+      "T06",
+      "T07",
+      "T08",
+      "T04"
+    ]
+  },
+  "cold_start": true,
+  "course": "FX.101",
+  "feature_set": "full",
+  "k": 4,
+  "lessons_run_seq": null,
+  "made_at": "2026-09-11T09:00:00-07:00",
+  "run_id": "r0-FX.101-final-2022F",
+  "schema_version": 1,
+  "target_exam": "FX.101-final-2022F",
+  "topics": [
+    {
+      "in_top_k": true,
+      "p": 0.82,
+      "rank": 1,
+      "signals": {
+        "x1": 0.0,
+        "x2": 0.0,
+        "x3": 0.0,
+        "x4": 0.0,
+        "x5": 0.0,
+        "x6": 0.0,
+        "x7": 0.0
+      },
+      "topic": "Complex numbers",
+      "topic_id": "T01"
+    },
+    {
+      "in_top_k": true,
+      "p": 0.74,
+      "rank": 2,
+      "signals": {
+        "x1": 0.0,
+        "x2": 0.0,
+        "x3": 0.0,
+        "x4": 0.0,
+        "x5": 0.0,
+        "x6": 0.0,
+        "x7": 0.0
+      },
+      "topic": "Difference equations",
+      "topic_id": "T02"
+    },
+    {
+      "in_top_k": true,
+      "p": 0.66,
+      "rank": 3,
+      "signals": {
+        "x1": 0.0,
+        "x2": 0.0,
+        "x3": 0.0,
+        "x4": 0.0,
+        "x5": 0.0,
+        "x6": 0.0,
+        "x7": 0.0
+      },
+      "topic": "Z transform",
+      "topic_id": "T03"
+    },
+    {
+      "in_top_k": true,
+      "p": 0.58,
+      "rank": 4,
+      "signals": {
+        "x1": 0.0,
+        "x2": 0.0,
+        "x3": 0.0,
+        "x4": 0.0,
+        "x5": 0.0,
+        "x6": 0.0,
+        "x7": 0.0
+      },
+      "topic": "Convolution",
+      "topic_id": "T04"
+    },
+    {
+      "in_top_k": false,
+      "p": 0.5,
+      "rank": 5,
+      "signals": {
+        "x1": 0.0,
+        "x2": 0.0,
+        "x3": 0.0,
+        "x4": 0.0,
+        "x5": 0.0,
+        "x6": 0.0,
+        "x7": 0.0
+      },
+      "topic": "Fourier series",
+      "topic_id": "T05"
+    },
+    {
+      "in_top_k": false,
+      "p": 0.42,
+      "rank": 6,
+      "signals": {
+        "x1": 0.0,
+        "x2": 0.0,
+        "x3": 0.0,
+        "x4": 0.0,
+        "x5": 0.0,
+        "x6": 0.0,
+        "x7": 0.0
+      },
+      "topic": "Fourier transform",
+      "topic_id": "T06"
+    },
+    {
+      "in_top_k": false,
+      "p": 0.34,
+      "rank": 7,
+      "signals": {
+        "x1": 0.0,
+        "x2": 0.0,
+        "x3": 0.0,
+        "x4": 0.0,
+        "x5": 0.0,
+        "x6": 0.0,
+        "x7": 0.0
+      },
+      "topic": "Sampling",
+      "topic_id": "T07"
+    },
+    {
+      "in_top_k": false,
+      "p": 0.26,
+      "rank": 8,
+      "signals": {
+        "x1": 0.0,
+        "x2": 0.0,
+        "x3": 0.0,
+        "x4": 0.0,
+        "x5": 0.0,
+        "x6": 0.0,
+        "x7": 0.0
+      },
+      "topic": "Modulation",
+      "topic_id": "T08"
+    }
+  ],
+  "weights": {
+    "intercept": -1.0,
+    "x1": 0.5,
+    "x2": 0.5,
+    "x3": 0.5,
+    "x4": 0.5,
+    "x5": 0.5,
+    "x6": 0.0,
+    "x7": 0.5
+  }
+}

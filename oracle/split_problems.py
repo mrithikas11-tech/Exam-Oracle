@@ -13,7 +13,7 @@ import datetime as dt
 import json
 import re
 
-from .config import OracleError, check_course, course_path, emit, save_report
+from .loader_config import OracleError, check_course, course_path, emit, save_report
 
 HEAD_PROBLEM = re.compile(r"^\s{0,8}(?:Problem|PROBLEM|Question|QUESTION)\s*#?\s*(\d{1,2})(?:\.(\d{1,2}))?\b")
 HEAD_NUMBER = re.compile(r"^\s{0,6}(\d{1,2})\.\s+\S")

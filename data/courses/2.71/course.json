@@ -1,0 +1,39 @@
+{
+  "course": "2.71",
+  "title": "Optics",
+  "ocw_url": "https://ocw.mit.edu/courses/2-71-optics-spring-2014/",
+  "published_term": "2014S",
+  "published_term_seq": 20141,
+  "calendar_has_real_dates": false,
+  "drafted_by": "role A (loader) on 2026-09-11 from the OCW Exams, Calendar, Syllabus and Assignments pages; role B to verify",
+  "assumptions": [
+    {
+      "id": "A1",
+      "text": "exam_type from the OCW Exams page names ('Quiz 1', 'Quiz 2', 'Final Exam') and the term from each file name (f04, s08, s09, s12, s13, s14). 2.71 and 2.710 share their quizzes and finals."
+    },
+    {
+      "id": "S-SESSION",
+      "text": "Published-term sessions are the 25 rows of the Spring 2014 calendar (SES # 1-25). lecture_n = SES # for lecture rows; rows 8 (Quiz 1), 19 (field trip) and 23-24 (2.710 project presentations) have no lecture; rows 7 and 25 are reviews. The calendar gives no dates."
+    },
+    {
+      "id": "S-EXAM",
+      "text": "Quiz 1 2014 is calendar row 8 (session 8). Quiz 2 2014 is a take-home posted at session 20 and due at session 22; session = 20, because its content is fixed when it is posted, so lectures from session 20 on count as after it."
+    },
+    {
+      "id": "S-SYNTH",
+      "text": "Exams in terms without a published calendar get the synthetic in-term ordinals used for 6.003: quiz1 = 1000, quiz2 = 2000, final = 9000 (after every real session)."
+    },
+    {
+      "id": "W-FINAL",
+      "text": "The Spring 2013 final is assumed cumulative (no page states it). The Spring 2014 final is not published (only practice problems), so it has no exam row."
+    },
+    {
+      "id": "H-SETS",
+      "text": "Problem-set posted/due sessions come from the calendar's IMPORTANT DATES column. Problem Set 3 is optional (is_practice = true). Problem Sets 5 and 6 have no published solutions."
+    },
+    {
+      "id": "T-LIST",
+      "text": "Topics are the calendar's lecture topics, merged where a later lecture revisits the same subject (sessions 6 and 10: gradient-index lenses and Hamiltonian optics; 12 and 13: spatial Fourier transforms). T00 is the off-list scoring bucket and is never predicted."
+    }
+  ]
+}

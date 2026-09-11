@@ -1,25 +1,25 @@
-"""Roll up one load of a course and append it to ledger.course_loads (the "cheaper" chart).
+"""Roll up one load of a course and upsert it into ledger.course_loads (the "cheaper" chart).
 
-seconds = wall time since the index step started. agent_tokens is the coding agent's
-reasoning tokens for a recorded (agent) load, passed in by hand; replays spend none (-1 = n/a).
+seconds = wall time since the index step started. agent_tokens is the coding agent's reasoning tokens for a
+recorded (agent) load, passed in by hand; NULL when not measured. Replays spend no agent tokens.
 """
 from __future__ import annotations
 
-import csv
 import datetime as dt
 import json
 
-from .config import OracleError, check_course, course_path, emit, read_report, write_json
-from .hotdata_cli import ledger_catalog, load_file
+from oracle.backend import get_backend
 
-COLUMNS = ["load_id", "course", "mode", "started_at", "finished_at", "seconds", "docs", "items",
-           "degraded", "sealed_excluded", "checks_first_try", "agent_tokens"]
+from .loader_config import OracleError, check_course, course_path, emit, read_report, write_json
+from .structure_io import contract_rows
+
+STEPS = ("extract", "split", "validate", "structure", "items", "tag", "load")
 
 
 def add_args(p):
     p.add_argument("--course", required=True)
     p.add_argument("--mode", choices=["agent", "replay"], default="replay")
-    p.add_argument("--agent-tokens", type=int, default=-1)
+    p.add_argument("--agent-tokens", type=int, default=None)
 
 
 def run(args) -> int:
@@ -31,7 +31,7 @@ def run(args) -> int:
     index = json.loads(index_path.read_text())
     started = dt.datetime.fromisoformat(index["started_at"])
     finished = dt.datetime.now(dt.timezone.utc)
-    reports = {s: read_report(course, s) or {} for s in ("extract", "split", "validate", "load", "cognee", "tags")}
+    reports = {s: read_report(course, s) or {} for s in STEPS}
     validate = reports["validate"]
     row = {
         "load_id": f"load-{course}-{started.strftime('%Y%m%dT%H%M%SZ')}",
@@ -39,20 +39,17 @@ def run(args) -> int:
         "started_at": index["started_at"], "finished_at": finished.isoformat(timespec="seconds"),
         "seconds": round((finished - started).total_seconds(), 1),
         "docs": len(list((work / "docs").glob("*.json"))),
-        "items": reports["load"].get("items", 0),
+        "items": int(reports["items"].get("items", 0)) + int(reports["load"].get("homework_problems", 0)),
         "degraded": sum(int(r.get("degraded", 0) or 0) for r in reports.values()),
         "sealed_excluded": index.get("sealed_excluded", 0),
         "checks_first_try": bool(validate.get("ok") and validate.get("attempts", 1) == 1),
         "agent_tokens": args.agent_tokens,
     }
-    path = course_path("work", course, "load") / "course_loads.csv"
-    with path.open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=COLUMNS)
-        writer.writeheader()
-        writer.writerow(row)
-    load_file(ledger_catalog(), "course_loads", str(path), "upsert")
-    summary = {"ok": True, **row, "rows": reports["load"].get("rows", {}),
-               "warnings": [r["warning"] for r in reports.values() if r.get("warning")]}
+    backend = get_backend()
+    backend.load_table(backend.ensure_ledger(), "course_loads", contract_rows("course_loads", [row]), mode="upsert")
+    summary = {"ok": True, **row, "backend": backend.name,
+               "exam_items_rows": reports["tag"].get("exam_items_rows"),
+               "warnings": [f"{s}: {r['warning']}" for s, r in reports.items() if r.get("warning")]}
     write_json(work / "summary.json", summary)
     emit(summary)
     return 0

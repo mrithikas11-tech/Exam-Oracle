@@ -1,0 +1,7 @@
+course,term,term_seq,set,issued_session,due_session,is_practice,problems_url,solutions_url,url_verified
+2.71,2014S,20141,1,2,4,false,https://ocw.mit.edu/courses/2-71-optics-spring-2014/817fa97daa405d9ab3b4ad3362d8aa7f_MIT2_71S14_HW_1.pdf,https://ocw.mit.edu/courses/2-71-optics-spring-2014/29862d5e41cfb75fd5eabfa10cd53b2d_MIT2_71S14_HW_1_sols.pdf,true
+2.71,2014S,20141,2,5,7,false,https://ocw.mit.edu/courses/2-71-optics-spring-2014/4721eabe5468603cd18c9c7bb404deb9_MIT2_71S14_HW_2.pdf,https://ocw.mit.edu/courses/2-71-optics-spring-2014/0a21d96bf3d042f1eb0410034f75daaa_MIT2_71S14_HW_2_sols.pdf,true
+2.71,2014S,20141,3,11,13,true,https://ocw.mit.edu/courses/2-71-optics-spring-2014/8a9b9f790b68d0b5bfed4b6ebb8f5136_MIT2_71S14_HW_3.pdf,https://ocw.mit.edu/courses/2-71-optics-spring-2014/099f9b294f15689987200d6eb3c72399_MIT2_71S14_HW_3_sols.pdf,true
+2.71,2014S,20141,4,13,15,false,https://ocw.mit.edu/courses/2-71-optics-spring-2014/f092c9e94242e194337c49173141c2cf_MIT2_71S14_HW_4.pdf,https://ocw.mit.edu/courses/2-71-optics-spring-2014/7d6f96a45ca594e6634c3933bd433f91_MIT2_71S14_HW_4_sols.pdf,true
+2.71,2014S,20141,5,14,17,false,https://ocw.mit.edu/courses/2-71-optics-spring-2014/8c8d0a14f38b0a4414be2f21cedd1b6b_MIT2_71S14_HW_5.pdf,,true
+2.71,2014S,20141,6,16,19,false,https://ocw.mit.edu/courses/2-71-optics-spring-2014/ddd2408cb0b2bcc94e4d9e88763c4891_MIT2_71S14_HW_6.pdf,,true

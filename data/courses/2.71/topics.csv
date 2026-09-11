@@ -1,0 +1,19 @@
+course,topic_id,topic,first_session,last_session,lecture_ns,taught_in_published_term,grounding
+2.71,T00,Off-list (not in topic list),,,,false,Scoring bucket for exam points on material outside T01-T17. Never predicted; its points stay in the scoring denominator
+2.71,T01,Nature of light,1,1,1,true,calendar SES #1 'Nature of Light'
+2.71,T02,Geometrical optics,2,2,2,true,calendar SES #2 'Geometrical Optics'
+2.71,T03,"Optical instruments: magnifiers, microscopes and telescopes",3,3,3,true,"calendar SES #3 'Optical Instrumentation, Magnifier Lens, Microscopes, Telescopes'"
+2.71,T04,Matrix methods in paraxial optics,4,4,4,true,calendar SES #4 'Matrix Methods in Paraxial Optics'
+2.71,T05,Apertures and stops,5,5,5,true,calendar SES #5 'Apertures and Stops'
+2.71,T06,"Gradient-index lenses, eikonal equation and Hamiltonian optics",6,10,6;10,true,"calendar SES #6 'Gradient Index Lenses, Hamiltonian Optics'; calendar SES #10 'Eikonal Equations, Gradient Index Lenses, Hamiltonian Optics'"
+2.71,T07,Electromagnetic wave equations,9,9,9,true,calendar SES #9 'Electromagnetic Wave Equations'
+2.71,T08,"Superposition of waves, interference and interferometry",11,11,11,true,"calendar SES #11 'Superposition of Waves, Interference, Optical Interferometry'"
+2.71,T09,Spatial Fourier transforms,12,13,12;13,true,calendar SES #12 'Spatial Fourier Transforms'; calendar SES #13 'Math Tutorial on Spatial Fourier Transforms'
+2.71,T10,Fraunhofer diffraction,14,14,14,true,calendar SES #14 'Fraunhofer Diffraction'
+2.71,T11,Diffraction gratings,15,15,15,true,calendar SES #15 'Diffraction Gratings'
+2.71,T12,Fresnel diffraction,16,16,16,true,calendar SES #16 'Fresnel Diffraction and Examples'
+2.71,T13,Coherent spatial filtering,17,17,17,true,calendar SES #17 'Examples of Coherent Spatial Filtering'
+2.71,T14,"Incoherent imaging, resolution and the pupil",18,18,18,true,"calendar SES #18 'Optical Imaging Systems with Spatially Incoherent Engineering Illumination, Resolution in Optical Systems, Pupil'"
+2.71,T15,"Depth of field, depth of focus and holography",20,20,20,true,"calendar SES #20 'Fresnel Diffraction, Depth of Field and Depth of Focus, Holography'"
+2.71,T16,Gaussian beams and principles of lasers,21,21,21,true,"calendar SES #21 'Gaussian Beams, Principles of Lasers'"
+2.71,T17,"Polarization, waveplates and birefringence",22,22,22,true,"calendar SES #22 'Vector Properties of Electromagnetic Fields: Polarization, Waveplates; Birefringence'"

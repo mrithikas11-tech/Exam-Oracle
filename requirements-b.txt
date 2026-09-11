@@ -1,0 +1,11 @@
+cognee==1.5.4
+duckdb==1.5.5
+hotdata==0.9.1
+hotdata-framework==0.14.0
+hydradb-sdk==2.1.4
+jsonschema==4.26.0
+pandas==3.0.5
+pyarrow==25.0.1
+pytest==9.1.1
+rdflib==7.1.4
+scikit-learn==1.9.1

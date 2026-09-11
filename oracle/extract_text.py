@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from .config import OracleError, check_course, course_path, emit, save_report
+from .loader_config import OracleError, check_course, course_path, emit, save_report
 
 MIN_CHARS = 200
 MANIFEST_FIELDS = ["sha256", "doc_id", "doctype", "is_solution", "exam_id", "exam_type", "term", "n",

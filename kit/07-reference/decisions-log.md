@@ -36,10 +36,26 @@ Append new entries at the bottom: time, decision, why, who. Entries below were m
 - Sponsor nodes present in `services-catalog.json`: ____
 - Hosted HydraDB `query_graph` accepts Cypher: ____
 - Cross-dataset Cognee recall merges: ____
-- Rote replay from Python works: **yes** — exit code 0/1 is reliable; output is a human report (rote 0.82 has no `--output=json`); structured results in `work/<course>/summary.json` and `ledger.course_loads`
+- Rote replay from Python works: **yes** — exit code 0/1 is reliable; output is a human report (rote 0.82 has no `--output=json`)
 - hotdata per-run index build time: **~1 s BM25, ~2 s vector (50 rows)** → per-run indexes are feasible
-- Course 2: **2.71 Optics** (18.06 earlier finals counted: **0**) — quiz-based runs
+- Course 2: **2.71 Optics** (18.06 earlier finals counted: **0**) — quiz-based runs; confirmed by the product owner
 - Answer key SHA-256 for 6.003 Final Fall 2011: ____ (time: ____)
+
+## 2026-09-11 — Person B, G0 (contracts + SDK corrections)
+
+| Time | Decision / finding | Why | Who |
+|---|---|---|---|
+| G0 | **Contracts written** in `contracts/`: `ledger-schema.sql`, `prediction.schema.json`, `student.md`, `README.md`, synthetic fixtures for course FX.101 (all ledger tables, a fake prediction, 3 fake runs, human-shaped answer keys). Validated: prediction fixture passes the schema; the DDL executes in DuckDB; every fixture CSV header matches its table. | Unblocks A (ledger columns) and C (prediction + runs shapes) | B |
+| G0 | **Time is ordered by `(term_seq, session)`, not dates.** `term_seq = year*10 + {1 spring, 2 summer, 3 fall}`; a row is visible to target T iff earlier term, or same term and earlier session. | OCW calendars often give session numbers, not dates | B |
+| G0 | **CONCERN — single-term materials.** OCW publishes lecture notes/psets for one term only, so earlier-term backtests cannot legitimately use them. Runs are tagged `feature_set = full` (target in the published term) or `exam_history` (only x1 and x7). The kit's M1 run (6.641 Final 2008 ← 2006) is an `exam_history` run. | Using a later term's lectures to predict an earlier exam leaks the future; the leakage check would fail | B |
+| G0 | **CONCERN — answer-key labeling load.** Every scored backtest needs a human-labeled key (~10–13 exams). Added `runs.key_source` (human/machine); `score.py` refuses without a human key unless `--allow-machine-key`, which marks the run as machine-graded. | "The AI never grades itself" is otherwise silently broken | B |
+| G0 | **Contract additions:** `run_labels` (training labels written after the seal), `echo_pairs` (homework-echo precomputed once instead of per-run search), `lessons` (ledger mirror of HydraDB lessons for charts), `guidelines`, `guideline_tests`, `courses`, `topics`, `exams`. | Refit needs labels without editing sealed predictions; per-run index builds are an untested cost | B |
+| G0 | **SDK fact — hotdata:** `hotdata-framework` managed loads require **Parquet** (CSV rejected by this client); idempotency = table keys + `mode="upsert"`; SQL inside a managed DB names tables `"default"."public"."<t>"`; env `HOTDATA_API_KEY`, `HOTDATA_WORKSPACE`, `HOTDATA_API_URL`. `ledger-schema.sql` is a column contract, not executable in hotdata (read-only SQL). | Read from installed source 0.14.0 | B → A |
+| G0 | **SDK fact — HydraDB:** package `hydradb-sdk` 2.1.4 imports as `hydra_db`; memories via `context.ingest(type="memory", memories=<JSON string>, upsert="true")`; item `{id,title,text,infer,custom_instructions,additional_metadata}`; **one collection per query** → student + shared = two queries. | Installed source + HydraDB docs llms.txt | B → C |
+| G0 | **SDK fact — Cognee 1.5.4:** feedback is `cognee.session.add_feedback(...)` (no top-level `cognee.add_feedback`); default storage is inside the installed package → set `DATA_ROOT_DIRECTORY`/`SYSTEM_ROOT_DIRECTORY`; default posture is authentication required + multi-tenant. | Installed source | B |
+| G0 | **Ownership:** B writes `oracle/cognee_tag.py` (tagging onto the strict topic list); A's `load-course` Play calls it. | Tagging is Cognee/model work; the Play only sequences it | B ↔ A |
+| G0 | **BLOCKED — live smoke tests.** This machine has no sponsor credentials (hotdata, HydraDB, Cognee LLM key) and its GitHub token is expired. B's code is built and tested offline (DuckDB + local stores); live paths are gated and marked `LIVE [TEST]`. | Needs team keys + repo access | B → team |
+| Build | **Contract: `run_labels` key `(run_id, topic_id)`** added to contracts/README.md (same map as `oracle/backend.py` `TABLE_KEYS`); `homework_vec` stays keyless. No fixture change (there is no `run_labels` fixture). | `score.py` writes `run_labels` after the seal and Rote replays must be idempotent, which needs an upsert key | B |
 
 ## Build log — role A (loader), 2026-09-11
 

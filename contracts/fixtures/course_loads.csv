@@ -1,0 +1,3 @@
+load_id,course,mode,started_at,finished_at,seconds,docs,items,degraded,sealed_excluded,checks_first_try,agent_tokens
+load-FX.101-20220901T100000Z,FX.101,agent,2022-09-01T10:00:00+00:00,2022-09-01T10:00:20+00:00,20.0,40,90,2,1,true,
+load-FX.101-20220902T100000Z,FX.101,replay,2022-09-02T10:00:00+00:00,2022-09-02T10:00:09+00:00,9.0,40,90,2,1,true,

@@ -1,0 +1,37 @@
+course,term,term_seq,session,date,lecture_n,title,topic_id,is_review
+18.06,2010S,20101,1,,1,The geometry of linear equations,T01,false
+18.06,2010S,20101,2,,2,Elimination with matrices,T01,false
+18.06,2010S,20101,3,,3,Matrix operations and inverses,T01,false
+18.06,2010S,20101,4,,4,LU and LDU factorization,T02,false
+18.06,2010S,20101,5,,5,Transposes and permutations,T02,false
+18.06,2010S,20101,6,,6,Vector spaces and subspaces,T03,false
+18.06,2010S,20101,7,,7,The nullspace: Solving Ax = 0,T03,false
+18.06,2010S,20101,8,,8,Rectangular PA = LU and Ax = b,T02,false
+18.06,2010S,20101,9,,9,Row reduced echelon form,T04,false
+18.06,2010S,20101,10,,10,Basis and dimension,T04,false
+18.06,2010S,20101,11,,11,The four fundamental subspaces,T04,false
+18.06,2010S,20101,13,,13,Graphs and networks,T05,false
+18.06,2010S,20101,14,,14,Orthogonality,T06,false
+18.06,2010S,20101,15,,15,Projections and subspaces,T06,false
+18.06,2010S,20101,16,,16,Least squares approximations,T06,false
+18.06,2010S,20101,17,,17,Gram-Schmidt and A = QR,T06,false
+18.06,2010S,20101,18,,18,Properties of determinants,T07,false
+18.06,2010S,20101,19,,19,Formulas for determinants,T07,false
+18.06,2010S,20101,20,,20,Applications of determinants,T07,false
+18.06,2010S,20101,21,,21,Eigenvalues and eigenvectors,T08,false
+18.06,2010S,20101,22,,22,Diagonalization,T08,false
+18.06,2010S,20101,23,,23,Markov matrices,T08,false
+18.06,2010S,20101,24,,,Review for exam 2,,true
+18.06,2010S,20101,26,,26,Differential equations,T09,false
+18.06,2010S,20101,27,,27,Symmetric matrices,T10,false
+18.06,2010S,20101,28,,28,Positive definite matrices,T10,false
+18.06,2010S,20101,29,,29,Matrices in engineering,T10,false
+18.06,2010S,20101,30,,30,Similar matrices,T11,false
+18.06,2010S,20101,31,,31,Singular value decomposition,T11,false
+18.06,2010S,20101,32,,32,"Fourier series, FFT, complex matrices",T12,false
+18.06,2010S,20101,33,,33,Linear transformations,T13,false
+18.06,2010S,20101,34,,34,Choice of basis,T13,false
+18.06,2010S,20101,35,,35,Linear programming,T14,false
+18.06,2010S,20101,36,,,Course review,,true
+18.06,2010S,20101,38,,38,Numerical linear algebra,T15,false
+18.06,2010S,20101,39,,39,Computational science,T15,false

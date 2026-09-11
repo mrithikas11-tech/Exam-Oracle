@@ -3,21 +3,28 @@
 .env.*
 !.env.example
 
-# data: raw downloads and work files never committed (manifests are copied to data/manifests/)
+# data: raw downloads, work files and local stores are never committed (manifests go to data/manifests/)
 data/raw/
 data/work/
+data/local-backend/
 *.pdf
 
-# sealed material must never be inside the repo
+# sealed material must never be inside the repo (synthetic fixture keys are the one exception)
 sealed/
+!contracts/fixtures/sealed/
 **/answer_key*.csv
+!contracts/fixtures/sealed/answer_key_*.csv
 
 # python / tooling
 __pycache__/
+*.pyc
 *.egg-info/
 build/
 dist/
 .venv/
+.local-backend/
+.pytest_cache/
 .rote/
+.rocketride/
 node_modules/
 .DS_Store

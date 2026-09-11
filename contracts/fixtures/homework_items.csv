@@ -1,0 +1,13 @@
+course,term,term_seq,session,hw_id,topic_id,text_clean
+FX.101,2022F,20223,3,FX.101-2022F-ps1-p1,T01,synthetic homework 1.1 on T01
+FX.101,2022F,20223,3,FX.101-2022F-ps1-p2,T02,synthetic homework 1.2 on T02
+FX.101,2022F,20223,6,FX.101-2022F-ps2-p1,T02,synthetic homework 2.1 on T02
+FX.101,2022F,20223,6,FX.101-2022F-ps2-p2,T03,synthetic homework 2.2 on T03
+FX.101,2022F,20223,9,FX.101-2022F-ps3-p1,T03,synthetic homework 3.1 on T03
+FX.101,2022F,20223,9,FX.101-2022F-ps3-p2,T04,synthetic homework 3.2 on T04
+FX.101,2022F,20223,12,FX.101-2022F-ps4-p1,T04,synthetic homework 4.1 on T04
+FX.101,2022F,20223,12,FX.101-2022F-ps4-p2,T05,synthetic homework 4.2 on T05
+FX.101,2022F,20223,15,FX.101-2022F-ps5-p1,T06,synthetic homework 5.1 on T06
+FX.101,2022F,20223,15,FX.101-2022F-ps5-p2,T06,synthetic homework 5.2 on T06
+FX.101,2022F,20223,18,FX.101-2022F-ps6-p1,T07,synthetic homework 6.1 on T07
+FX.101,2022F,20223,18,FX.101-2022F-ps6-p2,T08,synthetic homework 6.2 on T08

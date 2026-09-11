@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from .config import EXIT_INVALID, OracleError, check_course, course_path, emit, log, read_report, save_report
+from .loader_config import EXIT_INVALID, OracleError, check_course, course_path, emit, log, read_report, save_report
 
 TOLERANCE = 0.51
 

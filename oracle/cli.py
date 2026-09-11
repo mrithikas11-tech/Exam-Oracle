@@ -5,7 +5,7 @@ import argparse
 import importlib
 import sys
 
-from .config import OracleError, log
+from .loader_config import OracleError, log
 
 COMMANDS = {
     "index": ("oracle.ocw_index", "List a course's OCW documents with type, term and date"),
@@ -13,12 +13,13 @@ COMMANDS = {
     "extract": ("oracle.extract_text", "Extract text from downloaded PDFs; write the manifest"),
     "split": ("oracle.split_problems", "Split exams and problem sets into numbered problems with points"),
     "validate": ("oracle.validate", "Check numbering and point totals (exit 3 on failure)"),
-    "ledger-init": ("oracle.load_hotdata", "Create the hotdata ledger database and keyed tables"),
-    "load": ("oracle.load_hotdata", "Upsert a course's items into the hotdata ledger"),
-    "cognee": ("oracle.cognee_remember", "Write pre-split items for Cognee and remember them if configured"),
-    "tags": ("oracle.load_hotdata", "Upsert topic tags written by the Cognee step into the ledger"),
+    "ledger-init": ("oracle.load_ledger", "Create the ledger (contracts/ledger-schema.sql) if it is missing"),
+    "structure": ("oracle.structure", "Load courses/topics/exams/lectures/guidelines from data/courses/<course>/"),
+    "items": ("oracle.items", "Write the Cognee tagger's input (work/<course>/items.json)"),
+    "tag": ("oracle.tag", "Tag exam problems with Cognee (oracle.cognee_tag) and load exam_items"),
+    "load": ("oracle.load_ledger", "Load a course's homework into homework_items and homework_vec"),
+    "summary": ("oracle.summary", "Summarise a load and upsert it into ledger.course_loads"),
     "notify": ("oracle.notify_rocketride", "POST a course-loaded event to the RocketRide webhook"),
-    "summary": ("oracle.summary", "Summarise a load and append it to ledger.course_loads"),
 }
 
 

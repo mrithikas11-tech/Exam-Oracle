@@ -1,0 +1,20 @@
+# REAL_TEMPLATE: the real run list of kit/02-product/prediction-model.md "Run list (forward in time only)".
+# TEMPLATE - REVISE IT once the OCW scout confirms each course's terms, exam ids, sessions and published term.
+# feature_set follows the ordering rule (contracts/README.md): full iff the target is in the course's published
+# term, else exam_history (x2..x6 = 0). Published terms assumed here: 6.641 = 2009S (data/courses/6.641/course.json),
+# 6.003 = 2011F (kit/02-product/data-sources-and-sealing.md). oracle.run_list re-checks it against the ledger.
+# run_seq may have gaps; 4-6 are reserved for course 2. Sessions come from the ledger's exams rows, not from here.
+run_seq,course,target_exam,cold_start,feature_set,note
+1,6.641,6.641-quiz1-2008S,false,exam_history,Quiz 1 2008 <- Quiz 1 2006. The kit's '2008 term materials' are not on OCW (published term 2009S) so only x1 and x7 apply
+2,6.641,6.641-final-2008S,false,exam_history,Final 2008 <- Final 2006 + Quizzes 2006 (the kit's M1 run)
+3,6.641,6.641-final-2009S,false,full,Final 2009 <- Finals 2006 and 2008 + this term's Midterm (scout: the Midterm is 6.641-quiz1-2009S and is also a full-feature target candidate for G0)
+# 4-6: course 2 = 18.06 (Spring 2010) if it has >= 2 earlier finals, else 2.71 Optics (Spring 2014): 2-3 runs, decided at G0.
+# 4,<course 2>,<exam_id>,false,<feature_set>,
+7,6.003,6.003-quiz1-2010S,false,exam_history,first 6.003 prediction with the global lessons <- Quiz 1 Fall 2009
+8,6.003,6.003-quiz1-2010S,true,exam_history,cold-start twin of run 7 (the cross-course proof: same key and blank weights)
+9,6.003,6.003-quiz2-2010S,false,exam_history,<- Quiz 2 Fall 2009
+10,6.003,6.003-final-2010S,false,exam_history,<- Final Fall 2009
+11,6.003,6.003-quiz1-2011F,false,full,<- Quiz 1 Fall 2009 and Spring 2010
+12,6.003,6.003-quiz2-2011F,false,full,<- Quiz 2 Fall 2009 and Spring 2010
+13,6.003,6.003-quiz3-2011F,false,full,<- Quiz 3 Fall 2009
+14,6.003,6.003-final-2011F,false,full,THE REVEAL (sealed) <- Finals Fall 2009 and Spring 2010 + the Fall 2011 quizzes. See B_README.md 'The reveal' before running this row: the chain scores right after the seal

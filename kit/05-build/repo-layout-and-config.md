@@ -81,9 +81,9 @@ SEALED_DIR=                 # outside the repo
 | HydraDB image (optional) | v0.1.1 | `ghcr.io/hydra-db/hydradb` |
 | RocketRide extension | 1.2.0 | staging VSIX |
 | rote | 0.82.0 (installed) | ≥ 0.62.0 required by hello |
-| hotdata CLI | 0.33.0 | hotdata-framework / hotdata-langchain not used by the loader |
-| Python | 3.14.4 (loader, via `uv tool`) | Cognee supports 3.10–3.14; B may pin 3.12 |
-| requests | 2.34.2 | only runtime dependency of the loader |
+| hotdata CLI | 0.33.0 | loader smoke tests; hotdata-framework 0.14.0 for B's backend |
+| Python | 3.14.4 (loader, via `uv tool`) | Cognee supports 3.10–3.14 |
+| requests | 2.34.2 | loader HTTP |
 | poppler (pdftotext/pdftoppm) | 26.08.0 | text extraction |
 | tesseract | 5.5.2 | OCR repair only |
 | uv | 0.12.13 | installs `exam-oracle` as a tool |

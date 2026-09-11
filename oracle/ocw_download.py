@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 from urllib.parse import urljoin
 
-from .config import (MAX_DOWNLOAD_BYTES, OracleError, SkipList, check_course, check_ocw_url,
+from .loader_config import (MAX_DOWNLOAD_BYTES, OracleError, SkipList, check_course, check_ocw_url,
                      course_path, emit, log, ocw_get, write_json)
 
 PDF_HREF_RE = re.compile(r'href="([^"#?]+\.pdf)"', re.I)
@@ -95,16 +95,17 @@ def download_doc(doc: dict, skip: SkipList, force: bool = False) -> dict:
 
 
 def run(args) -> int:
-    skip = SkipList.load(args.skip_list)
     if args.doc:
         try:
             doc = json.loads(args.doc)
         except json.JSONDecodeError as err:
             raise OracleError(f"--doc is not JSON: {err}")
+        skip = SkipList.load(args.skip_list, check_course(doc.get("course", "")))
         emit({"ok": True, **download_doc(doc, skip, args.force)})
         return 0
 
     course = check_course(args.index)
+    skip = SkipList.load(args.skip_list, course)
     index = json.loads((course_path("work", course) / "index.json").read_text())
     results, failures = [], []
     with cf.ThreadPoolExecutor(max_workers=max(1, min(args.concurrency, 8))) as pool:

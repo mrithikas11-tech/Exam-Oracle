@@ -1,0 +1,9 @@
+course,topic_id,topic,first_lecture,last_lecture
+FX.101,T01,Complex numbers,1,2
+FX.101,T02,Difference equations,3,5
+FX.101,T03,Z transform,6,7
+FX.101,T04,Convolution,9,10
+FX.101,T05,Fourier series,11,12
+FX.101,T06,Fourier transform,13,15
+FX.101,T07,Sampling,16,17
+FX.101,T08,Modulation,18,19

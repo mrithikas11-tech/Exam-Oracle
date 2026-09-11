@@ -11,7 +11,7 @@ import html
 import re
 from urllib.parse import urljoin, urlparse
 
-from .config import (OracleError, SkipList, check_course, check_ocw_url, course_path, emit,
+from .loader_config import (OracleError, SkipList, check_course, check_ocw_url, course_path, emit,
                      exam_date, homework_date, lecture_date, log, ocw_get, write_json)
 
 PAGES = {"exams": "exam", "assignments": "homework", "lecture-notes": "lecture"}
@@ -110,7 +110,7 @@ def classify(course: str, page_doctype: str, slug: str, title: str, edition: str
 
 def run(args) -> int:
     course = check_course(args.course)
-    skip = SkipList.load(args.skip_list)
+    skip = SkipList.load(args.skip_list, course)
     root, slug = course_root(args.course_url)
     edition = edition_term(slug)
     started_at = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")

@@ -1,0 +1,26 @@
+course,term,term_seq,session,date,lecture_n,title,topic_id,is_review
+6.641,2009S,20091,1,2009-02-03,1,L1: Integral form of Maxwell's equations,T01,false
+6.641,2009S,20091,2,,2,L2: Differential form of Maxwell's equations,T01,false
+6.641,2009S,20091,3,2009-02-10,3,L3: Electroquasistatic (EQS) and magnetoquasistatic (MQS) fields and boundary conditions,T02,false
+6.641,2009S,20091,4,2009-02-12,4,L4: The scalar electric potential and the Coulomb superposition integral,T03,false
+6.641,2009S,20091,5,2009-02-19,5,L5: Method of images,T04,false
+6.641,2009S,20091,6,2009-02-24,6,L6: Magnetoquasistatics,T05,false
+6.641,2009S,20091,7,2009-02-26,7,L7: Polarization and conduction,T06,false
+6.641,2009S,20091,8,2009-03-03,8,L8: Magnetization,T07,false
+6.641,2009S,20091,9,2009-03-05,9,L9: Magnetic diffusion phenomena,T08,false
+6.641,2009S,20091,10,,10,L10: Solutions to Laplace's equation in Cartesian coordinates,T09,false
+6.641,2009S,20091,11,2009-03-12,10,L10: Solutions to Laplace's equation in Cartesian coordinates,T09,false
+6.641,2009S,20091,12,,11,L11: Solutions to Laplace's equation in polar and spherical coordinates,T10,false
+6.641,2009S,20091,13,,11,L11: Solutions to Laplace's equation in polar and spherical coordinates,T10,false
+6.641,2009S,20091,14,,12,L12: Electroquasistatic forces,T11,false
+6.641,2009S,20091,15,2009-04-07,12,L12: Electroquasistatic forces,T11,false
+6.641,2009S,20091,16,,12,L12: Electroquasistatic forces,T11,false
+6.641,2009S,20091,17,2009-04-14,13,L13: Magnetoquasistatic forces,T12,false
+6.641,2009S,20091,18,2009-04-16,13,L13: Magnetoquasistatic forces,T12,false
+6.641,2009S,20091,19,,13,L13: Magnetoquasistatic forces,T12,false
+6.641,2009S,20091,20,,13,L13: Magnetoquasistatic forces,T12,false
+6.641,2009S,20091,21,2009-04-30,14,L14: Fields and moving media,T13,false
+6.641,2009S,20091,22,,15,"L15: Force densities, stress tensors, and forces",T14,false
+6.641,2009S,20091,23,,18,L18: Waves and instabilities in elastic media,T17,false
+6.641,2009S,20091,24,,18,L18: Waves and instabilities in elastic media,T17,false
+6.641,2009S,20091,25,,19,L19: Waves and instabilities in the presence of motion,T18,false
