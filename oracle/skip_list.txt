@@ -1,0 +1,8 @@
+# Sealed files. The loader refuses to download, read or load anything listed here.
+# One entry per line: an https://ocw.mit.edu URL (resource page or PDF) or a SHA-256 hash.
+# Hashes are optional defence in depth; a human adds them from the sealed folder
+# (never computed by loader code). See kit/02-product/data-sources-and-sealing.md.
+
+# 6.003 Fall 2011 Final — the reveal target, and its solutions (answer key source)
+https://ocw.mit.edu/courses/6-003-signals-and-systems-fall-2011/resources/final-exam-fall-2011/
+https://ocw.mit.edu/courses/6-003-signals-and-systems-fall-2011/resources/final-exam-solutions-fall-2011/

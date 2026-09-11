@@ -1,0 +1,2 @@
+# Real exam dates override the assumed ones (config.EXAM_WEEK). source = calendar URL or "labeler".
+exam_id,date,source

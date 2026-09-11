@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "exam-oracle"
+version = "0.1.0"
+description = "Exam Oracle loader: generic OCW -> hotdata/Cognee scripts driven by Rote Plays"
+requires-python = ">=3.10"
+dependencies = ["requests>=2.32,<3"]
+
+[project.scripts]
+exam-oracle = "oracle.cli:main"
+
+[tool.setuptools]
+packages = ["oracle"]
+
+[tool.setuptools.package-data]
+oracle = ["skip_list.txt", "exam_dates.csv"]

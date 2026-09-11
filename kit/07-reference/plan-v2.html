@@ -1,0 +1,761 @@
+<title>Exam Oracle</title>
+<meta name="description" content="Build plan for Exam Oracle — an agent that learns how professors write exams, adapts to each student, and predicts a sealed MIT final.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,500;0,600;1,500&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#F5F7FA; --sheet:#FFFFFF; --ink:#151B26; --ink-2:#4A5467; --ink-3:#6B7588;
+  --rule:#D8DEE8; --rule-2:#C3CBD8;
+  --blue:#2346A0; --blue-wash:#E6EBF7;
+  --red:#B4342A; --red-wash:#F8E5E2;
+  --amber:#8A5A00; --amber-wash:#FBF0DA;
+  --green:#2C7A4B; --green-wash:#E2F2E8;
+  --serif:"STIX Two Text","Cambria","Georgia",serif;
+  --sans:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F131A; --sheet:#151B24; --ink:#E5E9F1; --ink-2:#A3ADBE; --ink-3:#7E889A;
+    --rule:#262E3C; --rule-2:#344055;
+    --blue:#93AAFF; --blue-wash:#1B2542;
+    --red:#FF8C7D; --red-wash:#3A1F1C;
+    --amber:#F2C065; --amber-wash:#342811;
+    --green:#74CF98; --green-wash:#15301F;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F131A; --sheet:#151B24; --ink:#E5E9F1; --ink-2:#A3ADBE; --ink-3:#7E889A;
+  --rule:#262E3C; --rule-2:#344055;
+  --blue:#93AAFF; --blue-wash:#1B2542;
+  --red:#FF8C7D; --red-wash:#3A1F1C;
+  --amber:#F2C065; --amber-wash:#342811;
+  --green:#74CF98; --green-wash:#15301F;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-underline-offset:2px}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:2px}
+.wrap{max-width:1140px;margin:0 auto;padding:40px 24px 96px;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:980px){.wrap{grid-template-columns:200px minmax(0,1fr);gap:56px}}
+.rail{display:none}
+@media (min-width:980px){
+  .rail{display:block;position:sticky;top:28px;align-self:start;font-family:var(--mono);font-size:12.5px;max-height:calc(100vh - 56px);overflow-y:auto}
+  .rail p{margin:0 0 10px;color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase;font-size:11px}
+  .rail ol{list-style:none;margin:0;padding:0 0 0 14px;display:grid;gap:6px;border-left:1px solid var(--rule)}
+  .rail a{color:var(--ink-2);text-decoration:none}
+  .rail a:hover{color:var(--blue)}
+}
+main{min-width:0}
+.cover{background:var(--sheet);border:1px solid var(--rule-2);padding:32px 32px 28px;position:relative}
+.cover .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(40px,6vw,60px);line-height:1.02;margin:0 0 16px;letter-spacing:-.01em}
+.lede{font-family:var(--serif);font-size:21px;line-height:1.45;max-width:36em;margin:0 0 24px;text-wrap:pretty}
+.stamp{position:absolute;top:26px;right:28px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);border:1.5px solid var(--red);padding:5px 9px;transform:rotate(3deg)}
+@media (max-width:620px){.stamp{position:static;display:inline-block;margin-bottom:14px;transform:none}}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));border-top:1px solid var(--rule);margin:0}
+.meta div{padding:12px 16px 12px 0;border-bottom:1px solid var(--rule)}
+.meta dt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.meta dd{margin:0;font-size:15px}
+section{padding-top:56px}
+h2{font-family:var(--serif);font-weight:600;font-size:30px;line-height:1.15;margin:0 0 6px;text-wrap:balance}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin:0 0 8px}
+h3{font-family:var(--sans);font-weight:700;font-size:17px;margin:28px 0 6px}
+p,li{max-width:70ch}
+p{margin:0 0 14px}
+ul,ol{padding-left:22px;margin:0 0 14px}
+li{margin-bottom:6px}
+.sub{color:var(--ink-2);margin-bottom:20px}
+code{font-family:var(--mono);font-size:.86em;background:var(--blue-wash);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+.changes{background:var(--sheet);border:1px solid var(--rule-2);border-top:3px solid var(--blue);padding:20px 24px 8px}
+.changes h3{margin-top:0}
+.changes li{max-width:none}
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));border:1px solid var(--rule-2);background:var(--sheet)}
+.trio > div{padding:20px 22px;border-right:1px solid var(--rule)}
+.trio > div:last-child{border-right:0}
+@media (max-width:760px){.trio > div{border-right:0;border-bottom:1px solid var(--rule)}.trio > div:last-child{border-bottom:0}}
+.trio h4{font-family:var(--serif);font-size:22px;font-weight:600;margin:0 0 2px}
+.trio .measure{font-family:var(--mono);font-size:12px;color:var(--blue);margin:0 0 10px}
+.trio p{font-size:15px;margin:0;color:var(--ink-2)}
+.tbl{overflow-x:auto;border:1px solid var(--rule-2);background:var(--sheet);margin:8px 0 18px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:660px}
+th,td{text-align:left;vertical-align:top;padding:11px 14px;border-bottom:1px solid var(--rule)}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);background:var(--paper)}
+td:first-child{font-weight:600}
+.num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px;white-space:nowrap}
+.chip{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;white-space:nowrap;font-weight:500;vertical-align:1px}
+.c-crit{color:var(--red);background:var(--red-wash)}
+.c-high{color:var(--amber);background:var(--amber-wash)}
+.c-med{color:var(--blue);background:var(--blue-wash)}
+.c-ok{color:var(--green);background:var(--green-wash)}
+.seal{border:1.5px dashed var(--red);background:var(--sheet);padding:20px 22px;margin:18px 0}
+.seal h3{margin-top:0;color:var(--red)}
+.seal ol{margin-bottom:0}
+/* tool dossiers */
+.tool{background:var(--sheet);border:1px solid var(--rule-2);margin:18px 0 0}
+.tool header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:16px 22px;border-bottom:1px solid var(--rule)}
+.tool header h3{margin:0;font-family:var(--serif);font-size:24px;font-weight:600}
+.tool header .role{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.04em}
+.tool .real{padding:14px 22px 2px;margin:0;color:var(--ink)}
+.tool .cols{display:grid;grid-template-columns:1fr;gap:0}
+@media (min-width:820px){.tool .cols{grid-template-columns:1.25fr 1fr}}
+.tool .cols > div{padding:6px 22px 16px}
+@media (min-width:820px){.tool .cols > div + div{border-left:1px solid var(--rule)}}
+.tool h4{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:12px 0 8px;font-weight:500}
+.tool ul{font-size:14.5px;padding-left:18px}
+.tool li{max-width:none}
+.tool .smoke{border-top:1px solid var(--rule);padding:12px 22px 14px;font-size:14px;color:var(--ink-2);background:var(--paper)}
+.tool .smoke strong{color:var(--ink);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;margin-right:6px}
+.flow{list-style:none;padding:0;margin:10px 0 18px;border-left:2px solid var(--blue)}
+.flow li{position:relative;padding:8px 0 8px 22px;max-width:none}
+.flow li::before{content:"";position:absolute;left:-6px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--sheet);border:2px solid var(--blue)}
+.flow .who{font-family:var(--mono);font-size:12px;color:var(--blue);margin-right:8px;font-weight:500}
+pre{font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--sheet);border:1px solid var(--rule-2);padding:16px 18px;overflow-x:auto;margin:8px 0 18px;color:var(--ink)}
+pre .c{color:var(--ink-3)}
+.plays{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin:10px 0 18px}
+.play{background:var(--sheet);border:1px solid var(--rule-2);padding:18px 20px}
+.play .pname{font-family:var(--mono);font-size:13.5px;font-weight:500;color:var(--blue);margin:0 0 8px}
+.play dl{margin:0;display:grid;gap:8px;font-size:14.5px}
+.play dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.play dd{margin:0}
+.personas{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:10px 0 18px}
+.persona{background:var(--sheet);border:1px solid var(--rule-2);padding:16px 20px}
+.persona .name{font-family:var(--serif);font-size:21px;font-weight:600;margin:0 0 2px}
+.persona .tag{font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px}
+.persona dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
+.persona dt{color:var(--ink-3)}
+.persona dd{margin:0}
+.script{list-style:none;padding:0;margin:10px 0 18px;border-top:1px solid var(--rule)}
+.script li{display:grid;grid-template-columns:62px minmax(0,1fr);gap:14px;padding:12px 0;border-bottom:1px solid var(--rule);max-width:none}
+.script .t{font-family:var(--mono);font-size:13px;color:var(--red);font-variant-numeric:tabular-nums;padding-top:1px}
+.script q{font-family:var(--serif);font-size:17px;font-style:italic}
+.check{list-style:none;padding:0;margin:10px 0 18px;display:grid;gap:2px}
+.check li{max-width:none}
+.check label{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;padding:9px 12px;background:var(--sheet);border:1px solid var(--rule);cursor:pointer}
+.check input{margin-top:5px;accent-color:var(--blue);width:16px;height:16px}
+.check input:checked + span{color:var(--ink-3);text-decoration:line-through}
+.note{font-size:14px;color:var(--ink-3)}
+.qa dt{font-weight:700;margin-top:16px}
+.qa dd{margin:4px 0 0;max-width:70ch;color:var(--ink-2)}
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+footer a{color:var(--ink-2)}
+</style>
+
+<div class="wrap">
+<nav class="rail" aria-label="Contents">
+  <p>Contents</p>
+  <ol>
+    <li><a href="#changed">What changed</a></li>
+    <li><a href="#idea">The idea</a></li>
+    <li><a href="#numbers">What improves</a></li>
+    <li><a href="#where">Where things run</a></li>
+    <li><a href="#tools">How each tool works</a></li>
+    <li><a href="#students">Students &amp; syllabi</a></li>
+    <li><a href="#data">The data</a></li>
+    <li><a href="#model">How it predicts</a></li>
+    <li><a href="#layers">The five layers</a></li>
+    <li><a href="#schema">Data model</a></li>
+    <li><a href="#plays">Rote Plays</a></li>
+    <li><a href="#run">Two full flows</a></li>
+    <li><a href="#demo">Demo script</a></li>
+    <li><a href="#timeline">8-hour timeline</a></li>
+    <li><a href="#cuts">Cut list</a></li>
+    <li><a href="#risks">Risks</a></li>
+    <li><a href="#qa">Judge questions</a></li>
+    <li><a href="#preflight">First 45 minutes</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="cover">
+  <span class="stamp">Plan v2 · nothing built</span>
+  <p class="eyebrow">Compound Agents hackathon · AWS Builder Loft · Sep 11, 2026 · 8-hour build</p>
+  <h1>Exam Oracle</h1>
+  <p class="lede">We hid a real MIT final from our AI. It learned how professors write exams from other courses, predicted this one, sealed the prediction — and then turned it into a different study plan for each student, in the way each one likes to learn.</p>
+  <dl class="meta">
+    <div><dt>Reveal exam (sealed)</dt><dd>6.003 Signals &amp; Systems — Final, Fall 2011</dd></div>
+    <div><dt>Learns first from</dt><dd>6.641 (2006–2009), then a second course</dd></div>
+    <div><dt>Per student</dt><dd>Preferences, syllabus, guidelines, feedback</dd></div>
+    <div><dt>Data</dt><dd>MIT OpenCourseWare, CC BY-NC-SA</dd></div>
+  </dl>
+</header>
+
+<section id="changed">
+  <div class="changes">
+    <h3>What changed after reading each tool's real docs</h3>
+    <ul>
+      <li><strong>RocketRide already ships nodes for Cognee, HydraDB and hotdata</strong> (<code>tool_cognee</code>, <code>graph_hydradb</code>, <code>db_hotdata</code>). The app is now built as RocketRide agents calling those nodes, not a dashboard over our own glue code.</li>
+      <li><strong>HydraDB is two products.</strong> RocketRide's node talks to the <em>hosted</em> memory API, which also gives each user an isolated collection and learns preferences from feedback — exactly what student profiles need. The open-source Cypher database becomes optional.</li>
+      <li><strong>Cognee cannot write into open-source HydraDB.</strong> Its Neo4j adapter uses APOC, constraints and UUID ids that HydraDB rejects. We no longer try.</li>
+      <li><strong>Cognee's current API is <code>remember</code> / <code>recall</code> / <code>improve</code> / <code>forget</code></strong>, with sessions, feedback, per-user datasets with permissions, and a strict ontology mode. Those carry the lesson loop and the student profiles.</li>
+      <li><strong>hotdata SQL is read-only</strong>; every write is a load. It can create a throwaway database per backtest in under a second, which makes peeking impossible by construction.</li>
+      <li><strong>A Rote Play replays a fixed graph of commands.</strong> Course parsing must be one generic script driven by inputs, recorded inside a Rote workspace, or it will not transfer between courses.</li>
+      <li><strong>Everything RocketRide calls must be reachable from its cloud engine.</strong> Decide where each piece runs in the first 45 minutes.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="idea">
+  <p class="kicker">The idea</p>
+  <h2>A study planner that learns how exams are written, and how you learn</h2>
+  <p>A student picks a course, uploads the syllabus and anything the professor has said about the exams, and tells Exam Oracle how they like to be taught. It works out how exams in that course are written — which topics always show up, which homework problems come back with the numbers changed, what the last weeks of lectures add — then builds a study plan and practice questions shaped to that student.</p>
+  <p>It learns on four levels:</p>
+  <ul>
+    <li><strong>Per course.</strong> Each past exam sharpens that course's prediction.</li>
+    <li><strong>Across courses.</strong> Rules about how professors write exams carry to a course it has never seen, so course 3 starts smarter than course 1 did. This is the pitch's spine.</li>
+    <li><strong>Per professor's word.</strong> It tests what a syllabus <em>says</em> (“the final emphasizes the last third”) against what past exams <em>did</em>, and learns how much to trust stated guidance.</li>
+    <li><strong>Per student.</strong> It remembers how each student likes to learn and updates from feedback (“too wordy”, “that example helped”).</li>
+  </ul>
+</section>
+
+<section id="numbers">
+  <p class="kicker">The brief's test: “every run makes the next run smarter, cheaper, more reliable”</p>
+  <h2>What the judges will see improve</h2>
+  <p class="sub">A “run” is one backtest: predict one past exam using only what a student would have had before it.</p>
+  <div class="trio">
+    <div><h4>Smarter</h4><p class="measure">% of exam points covered by the top-K topics</p><p>Per run, next to two baselines. The key comparison: course 3's first prediction with lessons from courses 1–2 versus blank weights.</p></div>
+    <div><h4>Cheaper</h4><p class="measure">Model tokens and minutes per new course</p><p>Course 1 is worked out by the agent; later courses replay the Rote loading Play with near-zero model tokens. RocketRide's tracing shows token use per call.</p></div>
+    <div><h4>More reliable</h4><p class="measure">First-try check pass rate · Brier score</p><p>Loading checks passing first time, leakage checks passing every run, and stated probabilities matching what appeared.</p></div>
+  </div>
+  <p class="note" style="margin-top:12px">Plus one per-student signal on the demo screen: the preference text before and after a student's feedback. No numbers are promised; the baselines make a modest lift legible.</p>
+</section>
+
+<section id="where">
+  <p class="kicker">Decide this in the first 45 minutes — a laptop stack behind a cloud app fails silently</p>
+  <h2>Where things run</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Piece</th><th>Runs on</th><th>Why</th><th>Fallback</th></tr></thead>
+    <tbody>
+      <tr><td>RocketRide app and pipelines</td><td>RocketRide staging (cloud)</td><td>Deployed apps are served from staging; every run draws on the promo credits</td><td>Local RocketRide engine in VS Code for development</td></tr>
+      <tr><td>hotdata</td><td>hotdata cloud</td><td>Reachable from both the laptop and RocketRide; $100 sign-up credit</td><td>—</td></tr>
+      <tr><td>HydraDB (hosted)</td><td>api.hydradb.com, free “Ship” tier</td><td>The RocketRide node speaks this API; per-student collections</td><td>Open-source HydraDB in Docker, called from the laptop only</td></tr>
+      <tr><td>Cognee</td><td>One Cognee server both sides can reach</td><td>RocketRide's <code>tool_cognee</code> calls a Cognee server by URL (default <code>localhost:8000</code>)</td><td>Cognee Cloud if the sponsor provides access; otherwise the laptop server behind an authenticated tunnel</td></tr>
+      <tr><td>Course loader and Rote Plays</td><td>Laptop</td><td>Rote runs locally; RocketRide's Python node has no network or subprocess, so it cannot run Rote</td><td>—</td></tr>
+      <tr><td>Open-source HydraDB <span class="chip c-med">optional</span></td><td>Laptop Docker</td><td>Only for the Cypher “why this topic” path view</td><td>Cognee <code>recall</code> explains the path in words instead</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="tools">
+  <p class="kicker">What each tool really is, how we use it fully, and what bites</p>
+  <h2>How each tool actually works</h2>
+  <p class="sub">Each card ends with the 15-minute test its owner runs before building anything on it. <span class="chip c-ok">Docs</span> = read in the vendor's docs or source; <span class="chip c-high">Test</span> = not confirmed, check it first.</p>
+
+  <article class="tool" id="t-cognee">
+    <header><h3>Cognee</h3><span class="role">Structure · builds the course and student knowledge</span></header>
+    <p class="real">An open-source memory engine. You hand it text; an LLM extracts the entities and links you define, and it stores them in its own graph (Ladybug), vectors (LanceDB) and metadata (SQLite). Current version 1.5.4 — pin it; four releases landed in two weeks.</p>
+    <div class="cols">
+      <div>
+        <h4>How we use it fully</h4>
+        <ul>
+          <li><strong><code>remember</code> / <code>recall</code></strong>, the current API the brief asks for, not the legacy <code>cognify</code>/<code>search</code>. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Custom graph model</strong> (<code>DataPoint</code> classes) with <code>identity_fields</code> on Topic, so one topic is one node however often it is mentioned. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Strict ontology per course</strong>, built at runtime from the syllabus topic list, so every tag lands on the fixed list; off-list tags are dropped. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Datasets with permissions</strong>: one shared dataset per course, one private dataset per student; <code>recall(dataset_ids=[course, student])</code>. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Sessions → <code>add_feedback</code> → <code>improve()</code></strong>: every backtest is a session scored as feedback, and every student chat is a session whose feedback updates their preference text (<code>PERSONALIZATION_ENABLED=true</code>). <span class="chip c-ok">Docs</span></li>
+          <li>Create what you already know (course, term, exam, run) in code and tag with <code>node_set</code>; spend the LLM only on problem → topic tagging.</li>
+          <li><code>dry_run=True</code> to price an ingest before running it.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Watch out</h4>
+        <ul>
+          <li>Neo4j provider → open-source HydraDB fails on the first write. Do not wire them.</li>
+          <li>Cost is per-chunk extraction; ~2,000 chunks at 60 requests/minute is 30+ minutes. Pre-split PDFs into one problem + solution per item; set a cheaper <code>LLM_EXTRACTION_MODEL</code>; <code>self_improvement=False</code> during bulk loads.</li>
+          <li>The default PDF loader (pypdf) garbles equations; topic tagging survives it.</li>
+          <li>Ladybug uses file locks: run exactly one Cognee process.</li>
+          <li>The built-in preference node changes ranking, not answer style, and is invisible in results. Keep explicit style in our own StudentProfile and pass it as the system prompt.</li>
+          <li>Merging results across two datasets in one <code>recall</code> is <span class="chip c-high">Test</span>; so is <code>forget</code> for one student leaving others' sessions intact.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="smoke"><strong>First test</strong>Install <code>cognee[docs]==1.5.4</code>; define Topic and ExamProblem; <code>remember</code> two problems with <code>dry_run</code>, then for real; confirm a shared topic is one node. Create users <em>admin</em>, <em>s1</em>, <em>s2</em>; grant the course dataset to both; confirm <em>s1</em> cannot read <em>s2</em>. Run a session, <code>add_feedback("too wordy", 2)</code>, <code>improve()</code>, and check the preference text changed.</p>
+  </article>
+
+  <article class="tool" id="t-hydra">
+    <header><h3>HydraDB</h3><span class="role">Memory · durable lessons and student profiles, served to the agent</span></header>
+    <p class="real">Two products under one name. The <strong>hosted API</strong> is a memory service: databases, collections, memories you store and recall, hybrid retrieval, and preference inference from raw text. The <strong>open-source</strong> Rust database speaks a subset of Cypher over Neo4j's Bolt protocol. RocketRide's node talks to the hosted one.</p>
+    <div class="cols">
+      <div>
+        <h4>How we use it fully</h4>
+        <ul>
+          <li><strong>One collection per student</strong> (<code>collection = student id</code>) — the pattern HydraDB's docs recommend. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Explicit preferences</strong> stored as-is (<code>infer:false</code>) under fixed ids such as <code>s42_pref_pace</code>, so an update replaces the old value. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Feedback</strong> stored with <code>infer:true</code>, so HydraDB extracts the lasting preference from “too wordy”. <span class="chip c-ok">Docs</span></li>
+          <li><strong>The student's syllabus and guidelines</strong> ingested as knowledge in their collection.</li>
+          <li><strong>Shared lessons, predictions and run summaries</strong> in a shared collection; read with hybrid <code>/query</code> and <code>recency_bias</code> so the newest lessons count most. <span class="chip c-ok">Docs</span></li>
+          <li>From RocketRide: <code>store_memory</code>, <code>recall_memory</code>, <code>query_graph</code>, <code>get_schema</code>.</li>
+          <li><span class="chip c-med">Optional</span> Open-source HydraDB for the course graph: <code>algo.MSpaths</code> from this term's topics to past exam problems gives the “why” path and a path-count signal.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Watch out</h4>
+        <ul>
+          <li>Searching a student's collection and the shared one in a single query is <span class="chip c-high">Test</span>; budget two queries.</li>
+          <li>Whether hosted <code>query_graph</code> (or the MCP <code>hydradb_graph_query</code> tool) runs Cypher is <span class="chip c-high">Test</span>; the docs disagree.</li>
+          <li>Open-source rules if used: integer node ids plus a <code>key</code> string; only scalar properties; bounded paths (<code>*1..3</code>); no <code>max()</code>; write over Bolt only (HTTP writes return 500 on <code>:latest</code>, issue #196); set <code>RUST_MIN_STACK=33554432</code> or it crashes on the first query; keep problem text out (strings over ~32 KiB crash a worker).</li>
+          <li>“Git-style temporal versioning” is marketing; there is no point-in-time query. Keep lesson history yourself.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="smoke"><strong>First test</strong><code>pip install "hydradb-sdk&gt;=2,&lt;3"</code>; store one explicit preference and one raw feedback line (<code>infer:true</code>) in <code>collection=s1</code>; query them back; store a lesson in the shared collection; query both collections. From RocketRide, call <code>get_schema</code> and <code>query_graph</code> once to learn what the node really accepts.</p>
+  </article>
+
+  <article class="tool" id="t-hotdata">
+    <header><h3>hotdata</h3><span class="role">Insight · signals, echo search, leakage-proof backtests, scoreboard</span></header>
+    <p class="real">A query engine (Rust, DataFusion, Arrow) where a database is a disposable scope created in one call. Workspaces share nothing; databases can expire on their own; results are saved and re-queryable. SQL is read-only — data goes in through loads.</p>
+    <div class="cols">
+      <div>
+        <h4>How we use it fully</h4>
+        <ul>
+          <li><strong>A permanent <code>ledger</code> database</strong> for all loaded problems, the run log and the scoreboard.</li>
+          <li><strong>One throwaway database per backtest</strong> (<code>--expires-at 2h</code>), loaded with only rows dated before the target exam. The model physically cannot see the future. <span class="chip c-ok">Docs</span></li>
+          <li><strong>The six signals as saved, versioned queries</strong>, run identically in every run database; the query-run history is the audit trail.</li>
+          <li><strong>Homework echoes by hybrid search</strong>: <code>bm25_search</code> on cleaned text plus <code>vector_search</code> on a separate table, fused in SQL with reciprocal rank (<code>1/(60+rank)</code>). <span class="chip c-ok">Docs</span></li>
+          <li>A leakage assertion inside each run database: latest date &lt; target exam date.</li>
+          <li>From RocketRide: <code>db_hotdata</code> with <code>database_id</code> set to the ledger so results persist between runs.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Watch out</h4>
+        <ul>
+          <li>No <code>INSERT</code>: write the run log as inline CSV loads (≤ 2 MiB) with <code>idempotency_key=run_id</code>; the first load into a table must be <code>replace</code>.</li>
+          <li>Forks drop indexes; a self-embedding vector index must be the only index on its table.</li>
+          <li>BM25 splits on non-alphanumerics and drops tokens over 40 bytes: store a de-LaTeXed text column.</li>
+          <li>BM25 applies <code>WHERE</code> after taking the top k — over-fetch.</li>
+          <li>Index build time per run is not published <span class="chip c-high">Test</span>. If slow, index once in the ledger and date-filter queries instead.</li>
+          <li>hotdata's embeddings are not Cognee's; never mix the vectors.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="smoke"><strong>First test</strong><code>brew install hotdata-dev/tap/cli</code>, <code>hotdata auth register</code>; create an expiring database; load 50 homework rows and time it; build a text and a vector index with <code>--async</code> and time the jobs; run <code>bm25_search</code>, <code>vector_search</code> and the fused query; append to the ledger twice with the same <code>idempotency_key</code> and confirm no duplicate.</p>
+  </article>
+
+  <article class="tool" id="t-rocket">
+    <header><h3>RocketRide</h3><span class="role">Motion · the student app and the agent pipelines</span></header>
+    <p class="real">An open-source pipeline engine (C++ core, Python nodes) with a VS Code IDE. Pipelines are JSON <code>.pipe</code> files of nodes: 15+ LLM providers, document parsers and OCR, agents, tools, memory, vector stores — and nodes for Cognee, HydraDB and hotdata. Apps are React screens deployed to staging.</p>
+    <div class="cols">
+      <div>
+        <h4>How we use it fully</h4>
+        <ul>
+          <li><strong>The sponsor nodes on the canvas</strong>: <code>tool_cognee</code> (<code>remember</code>, <code>recall</code>), <code>graph_hydradb</code>, <code>db_hotdata</code>. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Their agent, Wave</strong> (<code>agent_rocketride</code>), plans parallel tool calls. Cognee's node and the HTTP tool can only be called by an agent. <span class="chip c-ok">Docs</span></li>
+          <li><strong>The document parser</strong> (or LlamaParse for equations) for syllabi students upload.</li>
+          <li><strong>Webhook sources</strong> give each pipeline a public URL plus a key, so the laptop loader can trigger RocketRide after a course loads.</li>
+          <li><strong>Tracing</strong> shows tokens per call: run-1-versus-run-N evidence straight from the sponsor's own tool.</li>
+          <li><code>tool_pipe</code> turns a sub-pipeline into one tool; a <code>tool_python</code> step computes the SHA-256 seal.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Watch out</h4>
+        <ul>
+          <li>The docs contradict themselves on node names; <strong>trust <code>services-catalog.json</code></strong> in your workspace, as the setup guide says. Check the sponsor nodes exist in extension 1.2.0 <span class="chip c-high">Test</span>.</li>
+          <li>Auth drops: an empty <code>ROCKETRIDE_APIKEY</code> means “No authorization provided”; fix with <code>pnpm exec rocketride login</code>.</li>
+          <li>Wave is experimental: it needs exactly one LLM and one memory wired in; cap <code>max_waves</code> to protect credits.</li>
+          <li>A chat source needs <code>chat()</code>, a webhook needs <code>send()</code>; mismatches return nothing.</li>
+          <li>The HTTP tool is limited to 10 requests per second.</li>
+          <li>Claim the developer ID on a scratch app first; versions are immutable.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="smoke"><strong>First test</strong><code>pnpm exec rocketride login</code> and confirm the key is not empty; search <code>services-catalog.json</code> for the three sponsor nodes; run a chat → Wave pipeline with an LLM, internal memory and all three sponsor tools, asking it to remember X, recall X, and read both schemas; parse one OCW PDF; deploy a scratch app to @me and confirm credits drop.</p>
+  </article>
+
+  <article class="tool" id="t-rote">
+    <header><h3>Rote (Modiqo)</h3><span class="role">Muscle memory · course loading and backtests, replayed</span></header>
+    <p class="real">Rote records commands you run inside a Rote workspace — shell, API adapters, browser actions — as numbered records, then compiles the successful ones into a Play: a typed-input step graph (<code>main.ts</code>) that replays without the model re-reasoning. Deterministic in method, not in output. Runs locally on macOS or Linux.</p>
+    <div class="cols">
+      <div>
+        <h4>How we use it fully</h4>
+        <ul>
+          <li><strong>Record inside a workspace</strong>: <code>rote init oracle --seq</code>, then each step as <code>rote proc run …</code>; export with <code>rote workspace export oracle --params course_url,skip_list</code>. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Two Plays</strong>: <code>load-course</code> (replayed per course) and <code>run-backtest</code> (replayed every run while the lessons change).</li>
+          <li><strong>Checks as exit codes</strong>: numbering and point totals are hard faults; a missing solutions file is “degraded”, not fatal.</li>
+          <li><strong>The resume moment</strong>: a hard fault shows the failed step with its evidence, blocks what depends on it, and <code>--resume &lt;run_id&gt;</code> continues. <span class="chip c-ok">Docs</span></li>
+          <li><strong>Evidence</strong>: <code>rote trace --html</code> (a Gantt of the run) and <code>rote stats</code>.</li>
+          <li><strong>Publish <code>load-course</code> to the Playoffs Community catalog</strong> — the Modiqo team's own goal.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Watch out</h4>
+        <ul>
+          <li>A Play replays a fixed graph. Course-specific improvisation will not transfer, so the splitting and checking logic lives in one generic script driven by inputs.</li>
+          <li>Work done in a plain shell outside Rote, pasted values, or hidden state from earlier runs will not compile.</li>
+          <li>Default step timeout is 30 seconds — raise it for downloads and extraction.</li>
+          <li>Publishing requires a clean run from <code>/tmp</code>: embed or declare scripts; no <code>./scripts/…</code> paths.</li>
+          <li>Automated calls need <code>--yes --output=json</code>; credentials via <code>rote token set NAME --stdin</code>.</li>
+          <li>No per-run token command is documented: take run 1's tokens from the coding agent, and replays' from the JSON output <span class="chip c-high">Test</span>.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="smoke"><strong>First test</strong>Install, <code>rote login</code>, <code>rote whoami --check</code>; run the hello Play twice with <code>--output=json --yes</code> and see what timing and token fields appear; record a two-step workspace that fetches one OCW page; export, lint, replay with a second course URL, then a bad URL — confirm BLOCKED and that <code>--resume</code> works; call it from Python and parse the JSON.</p>
+  </article>
+
+  <article class="tool" id="t-snyk">
+    <header><h3>Snyk</h3><span class="role">Security · continuous, visible, and part of the story</span></header>
+    <p class="real">Judges will scan the app and deduct for findings. Snyk connects to Claude Code as an MCP server (Snyk Studio), so the coding agent can scan code and dependencies while it writes.</p>
+    <div class="cols">
+      <div>
+        <h4>How we use it fully</h4>
+        <ul>
+          <li>Snyk MCP in Claude Code; scan on demand with <code>snyk_code_scan</code> and <code>snyk_sca_scan</code>.</li>
+          <li>Two routine scans (hour 1, hour 6): <code>snyk code test --report --project-name=exam-oracle</code>, <code>snyk test --all-projects</code>, <code>snyk monitor --all-projects</code>; each <code>--report</code> adds a snapshot, so the history shows security was continuous.</li>
+          <li><code>snyk aibom --html</code> lists the models, agent libraries and MCP servers in the stack — an honest architecture slide.</li>
+          <li><code>snyk_package_health_check</code> before choosing a PDF library.</li>
+          <li>Design out the usual findings: course URLs only from <code>https://ocw.mit.edu</code> with redirects re-checked; files named by hash, never by remote name; Cypher and SQL always parameterised; keys only in environment variables with <code>.env</code> git-ignored from the first commit; never <code>verify=False</code>; LLM text rendered as text, never <code>dangerouslySetInnerHTML</code>; a bearer token on any tunnel.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Watch out</h4>
+        <ul>
+          <li><code>npx -y snyk@latest mcp configure --tool=claude-cli</code> writes into Claude's <em>global</em> rules file. Run it only on the hackathon machine, or add the MCP block to the project config by hand.</li>
+          <li>Snyk Code must be switched on in Settings before <code>snyk code test</code> works.</li>
+          <li>Free plan: 100 Code tests a month. The per-edit plugin can burn through them — prefer on-demand scans.</li>
+          <li>No Snyk rule covers prompt injection or an open tunnel; those are on us.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="smoke"><strong>First test</strong>Enable Snyk Code; connect the MCP; run <code>snyk code test</code> on the empty repo so the first snapshot exists.</p>
+  </article>
+</section>
+
+<section id="students">
+  <p class="kicker">New in v2 — the student layer</p>
+  <h2>Students, syllabi and preferences</h2>
+  <h3>What a student gives it</h3>
+  <ul>
+    <li><strong>The course and exam date</strong>, and weekly study hours.</li>
+    <li><strong>How they like to learn</strong>: worked examples first or proofs first; short or detailed; visual or verbal; pace.</li>
+    <li><strong>Their syllabus</strong> (PDF or text), and <strong>anything the professor said</strong> about exams: “final is cumulative”, “one cheat sheet”, “the final emphasizes the last third”.</li>
+    <li><strong>Feedback as they study</strong>: “too wordy”, “that example helped”, a 1–5 rating.</li>
+  </ul>
+  <h3>Where each piece is stored, and how it is used</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Input</th><th>Stored in</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td>Explicit preferences</td><td>HydraDB, the student's collection, fixed ids (<code>infer:false</code>); mirrored as a StudentProfile in the student's Cognee dataset</td><td>The system prompt for every explanation and practice question; the plan's order and length</td></tr>
+      <tr><td>Exam date, weekly hours</td><td>StudentProfile (Cognee) and a <code>students</code> table (hotdata)</td><td>Turning the ranked topic list into a day-by-day plan that fits the hours left</td></tr>
+      <tr><td>Syllabus</td><td>Parsed by RocketRide; <code>remember</code>ed into the student's Cognee dataset with a Syllabus model (topics, exam windows, guidelines); kept as knowledge in HydraDB</td><td>The course's topic list (becomes the strict ontology) and what each exam covers (the coverage signal)</td></tr>
+      <tr><td>Professor's stated guidelines</td><td>StatedGuideline items (kind, numbers, source) in Cognee; test results in hotdata</td><td>A seventh signal whose weight is how often stated guidance matched real exams</td></tr>
+      <tr><td>Feedback</td><td>HydraDB (<code>infer:true</code>) and a Cognee session scored with <code>add_feedback</code>, then <code>improve()</code></td><td>Updating the student's preferences; the next answer changes</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Privacy is part of the design</h3>
+  <ul>
+    <li>Each student's data sits in their own Cognee dataset and their own HydraDB collection. Shared course knowledge is read-only to students.</li>
+    <li>A student can never read another's data; Cognee raises a permission error, and the smoke test proves it.</li>
+    <li>“Delete my data” uses <code>forget</code> for that student — only after testing that it leaves other students' sessions intact.</li>
+  </ul>
+  <h3>Two demo students</h3>
+  <div class="personas">
+    <div class="persona"><p class="name">Maya</p><p class="tag">Example student · made up for the demo</p><dl><dt>Style</dt><dd>Worked examples first, short</dd><dt>Hours</dt><dd>6 a week</dd><dt>Exam</dt><dd>In 9 days</dd></dl></div>
+    <div class="persona"><p class="name">Leo</p><p class="tag">Example student · made up for the demo</p><dl><dt>Style</dt><dd>Proofs first, detailed</dd><dt>Hours</dt><dd>12 a week</dd><dt>Exam</dt><dd>In 16 days</dd></dl></div>
+  </div>
+  <p>Same sealed prediction, two different plans. Maya taps “too wordy”; her next explanation is shorter, and the stored preference visibly changes.</p>
+</section>
+
+<section id="data">
+  <p class="kicker">Checked on the OCW exam pages, Sep 10</p>
+  <h2>The data</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Course</th><th>What's public</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>6.641 Electromagnetic Fields, Forces &amp; Motion</td><td>Finals 2006, 2008, 2009 · Quiz 1 2006 and 2008 · Quiz 2 2006 · Midterm 2009 · 2005 review packet — all with solutions</td><td>Course 1. Teaches the first lessons.</td></tr>
+      <tr><td>18.06 Linear Algebra (Spring 2010)</td><td>Exams 1–3 and Final 2010 with solutions; older exams said to be under Study Materials — <strong>count not checked</strong></td><td>Course 2 if at least two earlier finals exist; otherwise 2.71 Optics (also unchecked)</td></tr>
+      <tr><td>6.003 Signals &amp; Systems</td><td>Quiz 1, Quiz 2 and Final for Fall 2009, Spring 2010, Fall 2011 · Quiz 3 for 2009 and 2011 — all with solutions</td><td>Course 3 and the reveal. Fall 2011 Final sealed.</td></tr>
+      <tr><td>18.01 Single Variable Calculus (Fall 2006)</td><td>One term: Exams 1–4, each with a practice exam and practice questions; the exam pages state coverage (“Sessions 1–7”)</td><td>Backup, and a source of stated coverage to test</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">License CC BY-NC-SA: credit MIT OpenCourseWare on the demo slide.</p>
+  <div class="seal">
+    <h3>Sealing rules — the demo is worthless if the system could have peeked</h3>
+    <ol>
+      <li>Every target exam is stored outside the repo and on the <code>load-course</code> skip list.</li>
+      <li>Each backtest runs in its own hotdata database containing only rows dated before the target exam, plus a check that proves it.</li>
+      <li>A teammate labels each hidden exam's problems with topics and points <em>before</em> any prediction. The AI never grades itself.</li>
+      <li>Every prediction prints a SHA-256 hash with a timestamp. At the reveal, recompute it in front of the judges.</li>
+      <li>Runs only go forward in time.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="model">
+  <p class="kicker">Simple enough to explain on stage</p>
+  <h2>How the prediction works</h2>
+  <p>Each course has a fixed list of 12–20 topics, taken from the syllabus or lecture calendar before any prediction. Every exam problem, homework problem and lecture is tagged against it. For each topic and target exam, seven signals:</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Signal</th><th>What it measures</th><th>Computed by</th></tr></thead>
+    <tbody>
+      <tr><td>Track record</td><td>How often the topic appeared on earlier exams of the same type, recent terms weighted more</td><td>hotdata saved query</td></tr>
+      <tr><td>Coverage</td><td>Inside what this exam covers (from the syllabus; finals cumulative)</td><td>hotdata, from the Syllabus model</td></tr>
+      <tr><td>Homework echo</td><td>Homework problems on the topic that resemble past exam problems</td><td>hotdata hybrid search</td></tr>
+      <tr><td>Lecture time</td><td>Lectures spent on the topic this term</td><td>hotdata</td></tr>
+      <tr><td>Untested recent material</td><td>For finals: taught after the last quiz</td><td>hotdata</td></tr>
+      <tr><td>Already tested</td><td>Weight on this term's quizzes (learned, either direction)</td><td>hotdata</td></tr>
+      <tr><td>Professor said <span class="chip c-med">new</span></td><td>The topic falls under a stated guideline, weighted by how often such guidance matched real exams</td><td>Cognee guidelines + hotdata test results</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>The weights are the lessons.</strong> After every run, refit them on all runs so far (a small logistic regression over topic rows). Store each as a lesson in HydraDB's shared collection with the runs that support it and a one-line statement.</li>
+    <li>A new course starts from the current lessons, not blank weights. Course 3's cold-start comparison proves it.</li>
+    <li><strong>Score:</strong> the share of the hidden exam's points whose topics are on the study list. <strong>Baselines on every run:</strong> “study evenly” (rank by lecture time) and “copy last exam”. Also topic recall and Brier score.</li>
+  </ul>
+</section>
+
+<section id="layers">
+  <p class="kicker">Each does repeated work; removing any one breaks the loop</p>
+  <h2>The five layers</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Layer</th><th>Tool and job</th><th>If removed</th></tr></thead>
+    <tbody>
+      <tr><td>Structure</td><td><strong>Cognee</strong> tags every problem, lecture and syllabus onto the course's topic list; holds course and student datasets; turns scored sessions into lessons and preferences.</td><td>Nothing is tagged; no student memory; no feedback loop</td></tr>
+      <tr><td>Memory</td><td><strong>HydraDB</strong> keeps lessons, predictions and one collection per student, and serves them to the agent with recency-weighted retrieval.</td><td>Every course and every student starts from zero</td></tr>
+      <tr><td>Insight</td><td><strong>hotdata</strong> computes the seven signals, finds homework echoes, isolates every backtest in its own database, and serves the scoreboard.</td><td>No signals, no leakage proof, no charts</td></tr>
+      <tr><td>Motion</td><td><strong>RocketRide</strong> runs the student app and its agent pipelines through the three sponsor nodes.</td><td>Nothing reaches a student</td></tr>
+      <tr><td>Muscle memory</td><td><strong>Rote</strong> replays course loading and backtests as fixed Plays.</td><td>Every course costs full reasoning; the cheaper line stays flat</td></tr>
+      <tr><td>Security</td><td><strong>Snyk</strong> scans continuously; per-student isolation is designed in.</td><td>Points lost; student data at risk</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="schema">
+  <p class="kicker">Agree these names in the first hour</p>
+  <h2>Data model</h2>
+  <h3>Cognee (datasets and models)</h3>
+<pre><span class="c">// datasets</span>
+course-&lt;code&gt;        shared, owned by a service user, read-only to students
+student-&lt;id&gt;         private to one student
+
+<span class="c">// DataPoint models (identity_fields in brackets)</span>
+Topic[course,name]   ExamProblem{points, text, topics}   HomeworkProblem{set, n, text, topics}
+Lecture{n, date, topics}
+Syllabus{topics, exams: ExamWindow{from_week, to_week, cumulative}, guidelines}
+StatedGuideline{kind, from_week, to_week, share, text, source_doc}
+StudentProfile{style_order, length, modality, pace, weekly_hours, exam_date}
+<span class="c">// node_set tags: course, term, doc type (exam | homework | lecture | syllabus)</span></pre>
+  <h3>HydraDB (hosted)</h3>
+<pre>database  exam-oracle
+  collection  shared      lessons (one memory per signal, with supporting runs),
+                          predictions, run summaries
+  collection  &lt;student&gt;   s&lt;id&gt;_pref_* (explicit, infer:false), feedback (infer:true),
+                          syllabus and guidelines (knowledge)</pre>
+  <h3>hotdata</h3>
+<pre>ledger (permanent)
+  exam_items      course, term, exam_type, problem, points, topic, date, text, text_clean
+  homework_items  course, term, set, problem, topic, date, text_clean        <span class="c">-- BM25 index</span>
+  homework_vec    course, term, set, problem, text_clean                     <span class="c">-- vector index only</span>
+  lectures        course, term, n, date, topic
+  guideline_tests guideline_id, run_id, predicted_share, observed_share, verdict
+  students        student_id, course, exam_date, weekly_hours
+  runs            run_id, course, target_exam, model_pts, even_pts, lastexam_pts,
+                  brier, tokens, seconds, checks_first_try, leakage_ok
+run-&lt;id&gt; (expires in 2h)   the same tables, only rows dated before the target exam</pre>
+  <h3>Open-source HydraDB <span class="chip c-med">optional</span></h3>
+<pre>(:Topic)&lt;-[:TESTS]-(:ExamProblem)-[:ECHOES {sim}]-&gt;(:HomeworkProblem)-[:PRACTICES]-&gt;(:Topic)
+<span class="c">// integer id + key string on every node; loaded by a ~100-line projector
+// from Cognee's graph with UNWIND … MERGE … SET over Bolt</span></pre>
+</section>
+
+<section id="plays">
+  <p class="kicker">Recorded once inside a Rote workspace, replayed with new inputs</p>
+  <h2>The Rote Plays</h2>
+  <div class="plays">
+    <div class="play">
+      <p class="pname">load-course</p>
+      <dl>
+        <div><dt>Input</dt><dd><code>course_url</code>, <code>skip_list</code></dd></div>
+        <div><dt>Steps</dt><dd>Fetch the OCW index → list PDFs → download each (for_each) → extract text → split into problems with points (one generic script) → validate → load rows into the hotdata ledger → <code>remember</code> each item into the course's Cognee dataset → call the RocketRide webhook “course loaded”.</dd></div>
+        <div><dt>Checks</dt><dd>Hard fault: problem numbers not 1…N, points not matching the printed total, a skip-listed file touched. Degraded: missing solutions file.</dd></div>
+        <div><dt>Demo</dt><dd>Course 3 is broken on purpose mid-run: BLOCKED with evidence, fix, <code>--resume</code>. Then published to the Playoffs catalog.</dd></div>
+      </dl>
+    </div>
+    <div class="play">
+      <p class="pname">run-backtest</p>
+      <dl>
+        <div><dt>Input</dt><dd><code>course</code>, <code>target_exam</code></dd></div>
+        <div><dt>Steps</dt><dd>Create an expiring hotdata database with pre-exam rows → run the saved signal queries → assert no leakage → read the lessons from HydraDB → rank topics → write the prediction and its SHA-256 → score it against the sealed key and both baselines → load the run row → refit lessons → store them in HydraDB → score the Cognee session and run <code>improve()</code>.</dd></div>
+        <div><dt>Why it matters</dt><dd>The same fixed method, replayed about ten times through the day, while the lessons it reads keep changing. That is the compounding chart.</dd></div>
+      </dl>
+    </div>
+  </div>
+  <p class="note">The practice exam is not a Play. It is generated per student inside RocketRide, because it has to change with each student's preferences.</p>
+</section>
+
+<section id="run">
+  <p class="kicker">Tool by tool</p>
+  <h2>Two full flows</h2>
+  <h3>A backtest (laptop, replayed by Rote)</h3>
+  <ol class="flow">
+    <li><span class="who">Rote</span><code>rote play run run-backtest course=6.641 target_exam=final-2009 --yes --output=json</code></li>
+    <li><span class="who">hotdata</span>Creates <code>run-17</code> with only pre-2009 rows; runs the seven signal queries; the leakage check passes.</li>
+    <li><span class="who">HydraDB</span>Returns the current lessons from the shared collection, newest weighted most.</li>
+    <li><span class="who">Rote</span>Ranks topics, writes the prediction, prints its hash.</li>
+    <li><span class="who">hotdata</span>Scores against the sealed key and both baselines; appends the run row to the ledger.</li>
+    <li><span class="who">HydraDB</span>Stores the refitted lessons with this run as evidence.</li>
+    <li><span class="who">Cognee</span>The run's session gets its score as feedback; <code>improve()</code> distils it.</li>
+    <li><span class="who">RocketRide</span>The dashboard pipeline re-reads the ledger; three charts gain a point.</li>
+  </ol>
+  <h3>A student asks for a plan (cloud, RocketRide)</h3>
+  <ol class="flow">
+    <li><span class="who">RocketRide</span>Maya opens her plan; the chat pipeline starts a Wave agent.</li>
+    <li><span class="who">HydraDB</span><code>recall_memory</code> on Maya's collection: examples first, short, 6 hours, exam in 9 days.</li>
+    <li><span class="who">hotdata</span><code>db_hotdata</code> reads the latest sealed prediction for 6.003 from the ledger.</li>
+    <li><span class="who">Cognee</span><code>recall</code> over the course and Maya's datasets: why each top topic ranks high, and matching past problems.</li>
+    <li><span class="who">RocketRide</span>The agent writes a 9-day plan and worked-example-first practice questions in Maya's style.</li>
+    <li><span class="who">HydraDB</span>Maya taps “too wordy”: stored with <code>infer:true</code>; the Cognee session gets the rating; the next answer is shorter.</li>
+  </ol>
+</section>
+
+<section id="demo">
+  <p class="kicker">Three minutes · rehearse twice · keep a recorded backup</p>
+  <h2>Demo script</h2>
+  <ol class="script">
+    <li><span class="t">0:00</span><div><q>Every student asks the same question: what's on the exam? This morning we hid one.</q> The sealed card: hash and time made.</div></li>
+    <li><span class="t">0:15</span><div>The <strong>cheaper</strong> chart: course 1 worked out by the agent, courses 2 and 3 replayed by Rote. Flash <code>rote trace --html</code>.</div></li>
+    <li><span class="t">0:35</span><div>The <strong>smarter</strong> chart against both baselines, then the cold-start comparison on 6.003.</div></li>
+    <li><span class="t">1:00</span><div>Recompute the hash live. Open the real 6.003 Fall 2011 Final. Problems light up as hits or misses with their points.</div></li>
+    <li><span class="t">1:35</span><div>Why one hit ranked high: it echoes a homework problem, a lesson learned on 6.641. And: <q>the syllabus said the final emphasizes the last third — past exams agreed two times in three.</q></div></li>
+    <li><span class="t">1:55</span><div>Maya and Leo: same prediction, two plans. Maya taps “too wordy”; her next explanation is shorter.</div></li>
+    <li><span class="t">2:25</span><div>The <strong>reliable</strong> panel, and the Rote moment: a broken step blocked with evidence, fixed, resumed.</div></li>
+    <li><span class="t">2:45</span><div>“If removed” slide. <q>Every course it reads, and every student it helps, makes the next answer better. Credit to MIT OpenCourseWare.</q></div></li>
+  </ol>
+</section>
+
+<section id="timeline">
+  <p class="kicker">Written for three people</p>
+  <h2>8-hour timeline</h2>
+  <p class="sub">A = course loader and Rote (laptop) · B = Cognee, HydraDB, signals and model · C = RocketRide app, student layer, demo, Snyk</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Hours</th><th>A</th><th>B</th><th>C</th><th>Milestone</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0:00–0:45</td><td>Rote and hotdata first tests; download every PDF locally; count 18.06's earlier exams</td><td>Cognee and HydraDB first tests; label and seal the hidden exams</td><td>RocketRide and Snyk first tests; decide where Cognee runs</td><td>“Where things run” decided; all first tests passed or fallbacks chosen</td></tr>
+      <tr><td class="num">0:45–2:00</td><td>Generic split-and-check script; record <code>load-course</code> on 6.641; export and lint</td><td>6.641 topic list → strict ontology; Cognee models and datasets; hotdata ledger and saved signal queries</td><td>App skeleton; syllabus upload pipeline (parser → Wave → Cognee + HydraDB); first Snyk snapshot</td><td>6.641 loaded and tagged</td></tr>
+      <tr><td class="num">2:00–3:00</td><td>Replay <code>load-course</code> on course 2; log the cost drop</td><td>Record <code>run-backtest</code>; first run: 6.641 Final 2008 from 2006</td><td>Dashboard pipeline over the ledger</td><td><strong>M1: first sealed prediction scored end to end</strong></td></tr>
+      <tr><td class="num">3:00–4:30</td><td>Replay on 6.003 with the skip list; capture the resume moment</td><td>Lesson refit into HydraDB; Cognee feedback loop; guideline tests; echo search</td><td>Student profiles: Maya and Leo; plan pipeline; feedback pipeline</td><td>Lessons refit after every run; both students working</td></tr>
+      <tr><td class="num">4:30–5:30</td><td>Publish <code>load-course</code> to the catalog; export the trace</td><td>All 6.003 runs; cold-start comparison; seal the final prediction</td><td>Reveal screen; “why” view</td><td><strong>M2: final 6.003 prediction sealed and its hash shown</strong></td></tr>
+      <tr><td class="num">5:30–6:30</td><td>Help C</td><td>Freeze the model; leakage audit</td><td>Practice questions in each student's style</td><td>Demo path works start to finish</td></tr>
+      <tr><td class="num">6:30–7:15</td><td colspan="3">Snyk scan 2 and <code>aibom</code> · rehearse twice · record the backup video</td><td><strong>M3: backup video saved</strong></td></tr>
+      <tr><td class="num">7:15–8:00</td><td colspan="3">Buffer · submission write-up · credit OCW</td><td>Submitted</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>Two people:</strong> A also takes B's hotdata work; two courses (6.641 and 6.003); one demo student.</li>
+    <li><strong>Solo:</strong> 6.003 only, with 2010 runs standing in for another course; one demo student; no catalog publish. Say so on stage.</li>
+  </ul>
+</section>
+
+<section id="cuts">
+  <p class="kicker">When behind, cut from the top</p>
+  <h2>Cut list</h2>
+  <ol>
+    <li>Open-source HydraDB and the Cypher “why” view (Cognee explains the path in words instead)</li>
+    <li>Practice questions (keep the plan)</li>
+    <li>Publishing to the Playoffs catalog</li>
+    <li>Vector search for echoes (keep BM25)</li>
+    <li>Course 2</li>
+    <li>Leo (keep Maya and her feedback)</li>
+  </ol>
+  <p><strong>Never cut:</strong> the sealed reveal with its hash, the per-run hotdata isolation, both baselines, the three charts, and one student whose feedback visibly changes the next answer.</p>
+</section>
+
+<section id="risks">
+  <p class="kicker">Named now so none of them surprises you at hour 5</p>
+  <h2>Risks</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Risk</th><th>Severity</th><th>What happens</th><th>Fallback</th></tr></thead>
+    <tbody>
+      <tr><td>RocketRide can't reach Cognee</td><td><span class="chip c-crit">Critical</span></td><td>The deployed app runs in the cloud; a laptop Cognee server is invisible to it.</td><td>Cognee Cloud, or the laptop server behind an authenticated tunnel.</td></tr>
+      <tr><td>Sponsor nodes missing from extension 1.2.0</td><td><span class="chip c-crit">Critical</span></td><td>The docs list them; the installed catalog may not.</td><td>The agent calls each service's REST API through the HTTP tool.</td></tr>
+      <tr><td>Cognee ingest too slow or expensive</td><td><span class="chip c-high">High</span></td><td>Per-chunk LLM extraction at 60 requests a minute.</td><td>Pre-split items; cheaper extraction model; price with <code>dry_run</code>; start course 1 by hour 1.</td></tr>
+      <tr><td>Hosted HydraDB has no Cypher</td><td><span class="chip c-high">High</span></td><td>Only memory store and recall.</td><td>That covers the core; the “why” path moves to optional open-source HydraDB or Cognee.</td></tr>
+      <tr><td>Rote Play doesn't transfer between courses</td><td><span class="chip c-high">High</span></td><td>Course 1's improvised parsing is baked in.</td><td>One generic script driven by inputs; record only inside the workspace.</td></tr>
+      <tr><td>Model loses to “copy last exam”</td><td><span class="chip c-high">High</span></td><td>Professors do repeat themselves.</td><td>Show it honestly; the lessons then say which signals matter for which course.</td></tr>
+      <tr><td>Math PDFs extract badly</td><td><span class="chip c-high">High</span></td><td>pypdf garbles equations.</td><td>Tagging survives it; RocketRide's LlamaParse node for uploaded syllabi; the hidden-exam key is typed by hand anyway.</td></tr>
+      <tr><td>Wave agent misbehaves</td><td><span class="chip c-med">Medium</span></td><td>It is marked experimental.</td><td>Cap <code>max_waves</code>; swap in the LangChain agent node.</td></tr>
+      <tr><td>Per-run index builds slow</td><td><span class="chip c-med">Medium</span></td><td>Not published.</td><td>Index once in the ledger; date-filter the queries.</td></tr>
+      <tr><td>“Delete my data” wipes others' sessions</td><td><span class="chip c-med">Medium</span></td><td>Cognee's full prune may clear the shared session cache.</td><td>Test first; leave deletion out of the live demo if it fails.</td></tr>
+      <tr><td>Snyk quota or findings</td><td><span class="chip c-med">Medium</span></td><td>100 Code tests a month.</td><td>On-demand scans plus the two routine scans.</td></tr>
+      <tr><td>Venue Wi-Fi</td><td><span class="chip c-med">Medium</span></td><td>Downloads and cloud calls stall.</td><td>All PDFs downloaded in the first 45 minutes; backup video offline.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="qa">
+  <p class="kicker">Rehearse these answers</p>
+  <h2>Judge questions</h2>
+  <dl class="qa">
+    <dt>“Isn't this just counting what came up before?”</dt>
+    <dd>That's Baseline B, and it's on every chart. The difference comes from homework echoes, untested recent material, trust in the professor's stated guidance, and lessons carried between courses — the cold-start comparison isolates the last.</dd>
+    <dt>“How do we know you didn't peek?”</dt>
+    <dd>Every backtest ran in its own database holding only earlier data, the prediction's hash was shown hours ago, and a person labeled the answer key before the prediction.</dd>
+    <dt>“Isn't this cheating?”</dt>
+    <dd>It uses only material professors publish so students can study from it. It tells you where to spend your hours.</dd>
+    <dt>“What do you store about students, and who can see it?”</dt>
+    <dd>Only what they give it: preferences, syllabus, feedback. Each student has their own dataset and collection; nobody else can read them.</dd>
+    <dt>“Where's the compounding?”</dt>
+    <dd>Points covered rises across runs; the cost to load a course falls once it's replayed; first-try checks rise; and a student's next answer changes after their feedback.</dd>
+    <dt>“Who pays?”</dt>
+    <dd>Students and tutoring companies first — and professors: “your exam tests topic X three times more than your lectures did.”</dd>
+  </dl>
+</section>
+
+<section id="preflight">
+  <p class="kicker">Hour 0 · ticks are saved in this browser only</p>
+  <h2>First 45 minutes</h2>
+  <ul class="check" id="checklist">
+    <li><label><input type="checkbox" data-k="accounts"><span>All six accounts; RocketRide promo code redeemed; Rote hello run and “ready &amp; warmed up” posted in Discord.</span></label></li>
+    <li><label><input type="checkbox" data-k="where"><span>Decide where Cognee runs (Cognee Cloud or tunnel) and confirm RocketRide can reach it.</span></label></li>
+    <li><label><input type="checkbox" data-k="rr"><span>RocketRide first test: sponsor nodes present in <code>services-catalog.json</code>; Wave calls all three.</span></label></li>
+    <li><label><input type="checkbox" data-k="cognee"><span>Cognee first test: one node per topic; <em>s1</em> can't read <em>s2</em>; feedback changes preference text.</span></label></li>
+    <li><label><input type="checkbox" data-k="hydra"><span>HydraDB first test: preference and feedback stored and recalled in <code>collection=s1</code>; <code>query_graph</code> behaviour noted.</span></label></li>
+    <li><label><input type="checkbox" data-k="hotdata"><span>hotdata first test: expiring database, both indexes timed, fused search works, idempotent ledger append.</span></label></li>
+    <li><label><input type="checkbox" data-k="rote"><span>Rote first test: record, export, replay with a new URL, BLOCKED on a bad URL, resume, JSON parsed from Python.</span></label></li>
+    <li><label><input type="checkbox" data-k="snyk"><span>Snyk Code enabled, MCP connected (not the global configure command), first snapshot taken.</span></label></li>
+    <li><label><input type="checkbox" data-k="data"><span>All PDFs downloaded; 18.06 earlier finals counted; 6.003 Fall 2011 Final moved out and on the skip list; answer key labeled.</span></label></li>
+  </ul>
+  <h3>Still unknown</h3>
+  <ul>
+    <li>Your start time, team size and skills; whether Cognee Cloud is available at the event.</li>
+    <li>Everything marked <span class="chip c-high">Test</span> above.</li>
+  </ul>
+</section>
+
+<footer>
+  Sources: <a href="https://docs.google.com/document/d/14FdPbLDZUuUei7JtLK-oQJeivwzej8ik-_PgCrs1EmY/edit">hackathon brief</a> ·
+  <a href="https://docs.google.com/document/d/1BWLk8x0EPWEO41vrC0wnK679EYRAy1uYe4gOPX8M31s/edit">RocketRide setup guide</a> ·
+  <a href="https://docs.rocketride.org/">RocketRide docs</a> ·
+  <a href="https://github.com/rocketride-org/rocketride-server">RocketRide engine</a> ·
+  <a href="https://docs.cognee.ai/core-concepts/main-operations/recall">Cognee recall</a> ·
+  <a href="https://docs.cognee.ai/core-concepts/multi-user-mode/multi-user-mode-overview">Cognee multi-user</a> ·
+  <a href="https://docs.cognee.ai/guides/feedback-system">Cognee feedback</a> ·
+  <a href="https://github.com/hydra-db/hydradb/blob/main/cypher-compat.md">HydraDB Cypher support</a> ·
+  <a href="https://docs.hydradb.com/llms.txt">HydraDB hosted docs</a> ·
+  <a href="https://www.hotdata.dev/docs/sql">hotdata SQL</a> ·
+  <a href="https://www.hotdata.dev/docs/api-reference/databases">hotdata databases</a> ·
+  <a href="https://modiqo.ai/docs/06-anatomy-of-a-play.md">Anatomy of a Play</a> ·
+  <a href="https://www.modiqo.ai/faq">Rote FAQ</a> ·
+  <a href="https://docs.snyk.io/agent-security/agentic-security-with-snyk-studio/quickstart-guides/claude-code-guide">Snyk for Claude Code</a> ·
+  <a href="https://ocw.mit.edu/courses/6-003-signals-and-systems-fall-2011/pages/exams/">6.003 exams</a> ·
+  <a href="https://ocw.mit.edu/courses/6-641-electromagnetic-fields-forces-and-motion-spring-2009/pages/exams/">6.641 exams</a>
+</footer>
+</main>
+</div>
+
+<script>
+(function(){
+  var KEY="exam-oracle-preflight-v2";
+  var state={};
+  try{state=JSON.parse(localStorage.getItem(KEY)||"{}")||{};}catch(e){state={};}
+  document.querySelectorAll("#checklist input[type=checkbox]").forEach(function(b){
+    if(state[b.dataset.k]) b.checked=true;
+    b.addEventListener("change",function(){
+      state[b.dataset.k]=b.checked;
+      try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
+    });
+  });
+})();
+</script>

@@ -1,2 +1,23 @@
+# secrets
 .env
+.env.*
+!.env.example
+
+# data: raw downloads and work files never committed (manifests are copied to data/manifests/)
 data/raw/
+data/work/
+*.pdf
+
+# sealed material must never be inside the repo
+sealed/
+**/answer_key*.csv
+
+# python / tooling
+__pycache__/
+*.egg-info/
+build/
+dist/
+.venv/
+.rote/
+node_modules/
+.DS_Store
