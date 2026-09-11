@@ -42,17 +42,11 @@ def oracle_env(tmp_path_factory: pytest.TempPathFactory):
 
 def build_fixture_ledger(backend=None):
     """Replace every contract table of the local ledger: with the fixture CSV rows when
-    contracts/fixtures/<table>.csv exists (typed from the DDL), else with no rows. Returns (backend, handle)."""
-    from oracle.backend import get_backend, ledger_tables, read_contract_csv
+    contracts/fixtures/<table>.csv exists (typed from the DDL), else with no rows. Returns (backend, handle).
+    The logic lives in oracle.fixture_ledger (also `python -m oracle.fixture_ledger --replace`)."""
+    from oracle.fixture_ledger import load_fixture_ledger
 
-    be = backend if backend is not None else get_backend()
-    if be.name != "local":
-        raise RuntimeError("fixture ledgers are built on the local backend only")
-    handle = be.ensure_ledger()
-    for table in ledger_tables():
-        csv_path = FIXTURES_DIR / f"{table}.csv"
-        rows = read_contract_csv(csv_path, table) if csv_path.is_file() else []
-        be.load_table(handle, table, rows, mode="replace")
+    be, handle, _ = load_fixture_ledger(backend)
     return be, handle
 
 

@@ -43,7 +43,7 @@ from oracle._cli import ScriptParser, read_json_file
 from oracle.backend import columns, get_backend, to_contract_table
 from oracle.ontology import TopicIndex, TopicRow, build_ontology, course_slug, load_topics, serialize_ontology
 
-EXIT_NO_LLM = 7
+EXIT_NO_LLM = config.EXIT_NO_LLM   # 7: LLM_API_KEY is not set for a live or dry run
 DOCTYPE = "exam"
 TAG_SOURCES = ("cognee", "human")
 MAX_TEXT_CHARS = 40_000

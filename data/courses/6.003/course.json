@@ -1,0 +1,93 @@
+{
+  "course": "6.003",
+  "title": "Signals and Systems",
+  "ocw_url": "https://ocw.mit.edu/courses/6-003-signals-and-systems-fall-2011/",
+  "published_term": "2011F",
+  "published_term_seq": 20113,
+  "instructor": "Prof. Dennis Freeman",
+  "calendar_has_real_dates": false,
+  "assumptions": [
+    {
+      "id": "A1",
+      "text": "exam_type by position. The three Fall 2011 midterm assessments have three names: 'Quiz n' on the Exams page, 'Exam n' on the calendar and 'Midterm n' in the syllabus (weights 10%, 15%, 20%), for n = 1, 2, 3. They are treated as one set and map to quiz1, quiz2, quiz3; the Final maps to final. The Fall 2009 and Spring 2010 covers read 'Quiz #n' and 'Final Examination' and map the same way. 6.003 has no makeup, conflict or practice exam papers. The practice homework sets (HW4, HW7, HW10, HW14) are homework, never exams."
+    },
+    {
+      "id": "S-SESSION",
+      "text": "Published-term sessions. The Fall 2011 calendar has 25 rows (SES # 1-25), one lecture per row, with no review-only or exam-only rows, so sessions.csv has 25 rows and session = lecture_n. Each exam shares a calendar row with a lecture that its date shows came before it: row 8 (L8 2011-10-04 < Quiz 1 2011-10-05 < L9 2011-10-06), row 13 (L13 2011-10-25 < Quiz 2 2011-10-26 < L14 2011-10-27), row 19 (L19 2011-11-15 < Quiz 3 2011-11-16 < L20 2011-11-17) and row 25 (L25 2011-12-08 < Final). So exam.session = row + 1: Quiz 1 = 9, Quiz 2 = 14, Quiz 3 = 20, Final = 26 (session_source = calendar_shared_row). Lectures taught before an exam stay visible to it; the next lecture does not. Consequence for every query: the lecture whose session equals an exam's session (L9, L14, L20) was given AFTER that exam, so 'before exam E' means session < E.session and 'after exam E' means session >= E.session, never > E.session."
+    },
+    {
+      "id": "S-SOURCE",
+      "text": "session_source vocabulary (proposed for all three courses): calendar_own_row = the exam has its own calendar row and session = that row, so no lecture row carries its session; calendar_shared_row = the exam has no row of its own (it is listed in a lecture's row or falls between rows) and session = last session delivered before it + 1, so a lecture row with that session, if any, came after the exam; synthetic = an exam of another term, whose session only orders exams inside that term (S-SYNTH). All four Fall 2011 exams are calendar_shared_row."
+    },
+    {
+      "id": "S-SYNTH",
+      "text": "Other terms. Fall 2009 and Spring 2010 have no published calendar, so their exams carry synthetic sessions that only order exams inside a term: quiz1 = 1000, quiz2 = 2000, quiz3 = 3000, final = 9000 (session_source = synthetic). Across terms, visibility is decided by term_seq alone (20093 < 20101 < 20113)."
+    },
+    {
+      "id": "S-HW-DUE",
+      "text": "Homework visibility uses the DUE session (conservative): a set with due_session s is visible to an exam with session S iff s < S. The calendar's 'HWn due' at row s means the Wednesday recitation between sessions s and s+1. Every collected set's PDF header date agrees: HW1 2011-09-14, HW2 09-21, HW3 09-28, HW5 10-12, HW6 10-19, HW8 11-02, HW9 11-09, HW11 11-23 (revisions 11-28), HW12 11-30, HW13 12-07. Result: Quiz 1 sees HW1-4, Quiz 2 sees HW1-7, Quiz 3 sees HW1-10 and the Final sees HW1-14."
+    },
+    {
+      "id": "S-HW-PRACTICE",
+      "text": "The practice sets HW4, HW7, HW10 and HW14 (is_practice = true) were not collected. Headers: 'This homework assignment will not be collected. Solutions will be posted.'; HW14: 'intended to help you practice for the final exam'. Their due_session is the calendar row they share with an exam ('HWn optional; Exam n': 8, 13, 19, 25), so each is visible to its own exam. This ASSUMES each practice set and its solutions were released before that exam (runlist T3); release dates are not published."
+    },
+    {
+      "id": "S-HW-ISSUED",
+      "text": "issued_session is blank for every set. No issue date appears on the calendar, the assignments page or any problem-set PDF header (all 14 read 2026-09-11). None is inferred. Visibility never uses issued_session."
+    },
+    {
+      "id": "W-QUIZ",
+      "text": "Quiz coverage is not stated anywhere: syllabus, calendar, assignments or exam covers. The x2 window is pre-registered before any Fall 2011 label exists, from calendar positions only: from the previous in-term exam's session (the first lecture after that exam, S-SESSION) through the last session before this exam, or from session 1 when there is no previous exam. Quiz 1 = 1-8, Quiz 2 = 9-13, Quiz 3 = 14-19, cumulative = false. These windows are ASSUMED, not professor statements, and have no guideline row. The ledger defines coverage_from/to_session as a STATED window and has no basis column, so a window stored there reaches the run labelled window_source = 'stated'. Storage: Quiz 1 leaves coverage_* blank and sql/coverage_window.sql derives 1-8 (since_previous_exam). Quiz 2 and Quiz 3 stay PINNED at 9-13 and 14-19, because that SQL's since-previous-exam fallback currently starts at the previous exam's session + 1 and would drop L9 (T09) and L14 (T11), both taught after the previous quiz. Blank them once the fallback starts at the previous exam's session; the window is then identical and labelled since_previous_exam. cumulative_basis records this on each row. Sensitivity arm, not primary: cumulative window 1..session-1."
+    },
+    {
+      "id": "W-FINAL",
+      "text": "No page states that any 6.003 final is cumulative. cumulative = true is ASSUMED for all three finals, and coverage_* is blank on all three. For Fall 2011, cumulative = true makes sql/coverage_window.sql give sessions 1-25, every taught session (window_source = cumulative). Fall 2009 and Spring 2010 have no calendar."
+    },
+    {
+      "id": "T5-CURATION",
+      "text": "Curated past-exam set (trap T5). The Exams page omits Spring 2010 Quiz 3 ('covers different topics and therefore has been omitted'). exams.csv keeps it as role = excluded, with no URLs and no total, so the gap stays visible here. The loader must filter role != excluded and never load that row into the ledger. The reason is that the ledger exams table has no role column: a loaded row would look like an exam with a result, visible by term_seq to every Fall 2011 target and to the Spring 2010 Final. It has no exam_items, so today it would not change K, x1, x6 or baseline B, which all need tagged items; filtering it keeps the T5 gap out of the ledger. Effects of the curation: x1 for Fall 2011 Quiz 3 is Fall 2009 Quiz 3 only, and x6 for the Spring 2010 Final lacks its Quiz 3. Disclose this on the Quiz 3 result."
+    },
+    {
+      "id": "SEALED",
+      "text": "The Fall 2011 Final is the sealed reveal: sealed = true, role = sealed_reveal, url_verified = false, with problems_url, solutions_url and total_points blank. skip_list.txt is the hard denylist the loader applies before any fetch. It holds the Final's two landing pages and two PDF URLs (plus two defensive host variants of each PDF), the OCW whole-course download bundle (6.003-fall-2011.zip, which contains the same PDFs) and the /download/ page that links it. The PDF URLs were resolved from the landing-page hrefs and the bundle URL from the /download/ page href; all were checked with HEAD only and never downloaded or opened. No page opened states the Final's date; it came after L25 (2011-12-08)."
+    },
+    {
+      "id": "DATES",
+      "text": "Lecture dates come from the title slide of each lecture-notes PDF: all 25 were read 2026-09-11, and the 9 the research verifier checked all match. The calendar page itself has no dates (calendar_has_real_dates = false). Exam dates come from the covers: Fall 2011 Quiz 1-3 from the verified research, Fall 2009 and Spring 2010 read here on 2026-09-11. Dates are informational; leakage uses (term_seq, session)."
+    },
+    {
+      "id": "TOTALS",
+      "text": "total_points. Fall 2011 Quiz 1-3 = 100: the sum of each cover's point table as the research verifier read it (page 1 only; not reopened here). Fall 2009 and Spring 2010 = 100, from each cover's 'Total /100' (read 2026-09-11). Fall 2011 Final: blank (sealed). No per-problem points are recorded in this file set; A extracts them from the PDFs."
+    },
+    {
+      "id": "GUIDE",
+      "text": "guidelines.csv holds only the three Fall 2011 quiz-cover crib-sheet lines (kind = format), verbatim. They are printed on the exam paper, so source_session is that exam's own session and they are not visible to their own exam. Nothing else a student saw before a Fall 2011 exam states coverage, emphasis, cumulativeness or a homework analogy, so x7 = 0 for every 6.003 topic. Deliberately not encoded: the calendar cells 'HWn optional; Exam n', which place the exam and pair the practice set with it (homework_sets carries this through is_practice and due_session) but make no topic-window or share claim; the Assignments-page sentence 'Assignments 4, 7, 10, and 14 were designed to serve as practice...' and the Exams-page sentence about earlier exams, which are OCW prose written after the term (trap T4); the syllabus grade weights, which make no topic claim."
+    },
+    {
+      "id": "TOPIC-LIST",
+      "text": "Topic list: 18 topics (T01-T18) partition the 25 Fall 2011 lectures. Names come from the lecture-notes titles with the verifier's corrections applied: 'Fourier representations and CT Fourier series' [14,15], 'CT Fourier transform' [16], 'DT frequency and Fourier representations' [17,18], and the course-description glosses on T02/T04 dropped. Two topics interleave: T09 = L9 + L11 and T10 = L10 + L12-13. The verifier judged this defensible, and no topic crosses an exam boundary. All 25 lectures were taught in Fall 2011 (taught_in_published_term = true). T00 'Off-list (not in topic list)' is never predicted; its points stay in the scoring denominator. first_session/last_session (the ledger's first_lecture/last_lecture) are OUTER BOUNDS, not membership: T09 [9,11] and T10 [10,13] overlap as ranges. Membership is the topic_id in sessions.csv (lecture_ns in topics.csv). sql/x7_professor_said.sql falls back to the range only for a topic with no visible lecture, and 6.003 has no scored guideline (x7 = 0), so the overlap has no effect here. The verifier's alternative, giving L9 and L10 topics of their own, was not adopted: it adds topics and single-lecture topics (12 of the 18 are already single-lecture) to fix a range that no 6.003 query reads."
+    },
+    {
+      "id": "A-TOPIC",
+      "text": "The topic list is course structure fixed from the Fall 2011 lecture titles. It is shared by all terms as labels only: for Fall 2009 and Spring 2010 it labels exam problems and never builds x2 or x4. Never edit it after any exam is labeled."
+    },
+    {
+      "id": "A-AVAIL",
+      "text": "Every earlier-term exam listed is assumed to have been available to Fall 2011 students before each Fall 2011 exam (OCW: 'provided for review purposes')."
+    },
+    {
+      "id": "X1-SCOPE",
+      "text": "x1 inputs are all seven published earlier-term papers: Fall 2009 Quiz 1-3 and Final, and Spring 2010 Quiz 1, Quiz 2 and Final, all on ocw.mit.edu under CC BY-NC-SA. This is a scope decision, not a finding: x1 is restricted to the papers on ocw.mit.edu (the allowlist) and no other archive was searched. The web.mit.edu/6.003 index pages only redirect to the current course sites, and nothing deeper was followed, to avoid any copy of the Fall 2011 Final. Same-type pairs (A1): Quiz 1 <- F09 Q1 + S10 Q1; Quiz 2 <- F09 Q2 + S10 Q2; Quiz 3 <- F09 Q3; Final <- F09 Final + S10 Final. Spring 2010 Quiz 1, Quiz 2 and Final are also eligible exam_history side-track targets (kit runs 4-6). role is single-valued, so it records their x1 use."
+    },
+    {
+      "id": "X5",
+      "text": "x5 (finals only), pre-registered: a topic is 'recent' if it has a Fall 2011 lecture at a session >= the last quiz's session (Quiz 3 = 20; S-SESSION), i.e. sessions 20-25 = L20-L25 = T15, T16, T17, T18. x5 = 1 for those not tagged on Quiz 1-3. L20 'Applications of Fourier Transforms' (2011-11-17) came the day after Quiz 3 and counts as recent."
+    },
+    {
+      "id": "INSTR",
+      "text": "Validity, not leakage: the earlier-term covers name different section instructors (Fall 2009: Marc Baldo, Elfar Adalsteinsson; Spring 2010: Peter Hagelstein, Rahul Sarpeshkar). The Fall 2011 OCW course is Prof. Dennis Freeman's. x1 therefore pools papers from different teaching teams."
+    }
+  ],
+  "sources_note": "Built 2026-09-11 by Person B. Sources: OCW 6.003 Fall 2011 pages (calendar, lecture-notes, assignments, exams, syllabus) fetched 2026-09-11; page 1 of all 25 lecture-notes PDFs (title-slide dates); page 1 of all 14 problem-set PDFs (due lines); the covers (page 1) of the 7 earlier-term exam PDFs (date, total); HEAD checks of all 48 exam and homework URLs listed (all 200 application/pdf) and of the 2 sealed Final PDFs (HEAD only; never downloaded); the research extraction and adversarial verification (workflow w786o76p0) and the leakage analysis (runlist.md). The Fall 2011 Quiz 1-3 PDFs were not opened by this build: their dates, totals and crib-sheet lines come from the verified research, which read page 1 only. The Readings-page TOPICS table cited in topics.csv grounding is as the research verifier reported it. No exam problem content is recorded in any structure file. Revised 2026-09-11 after the adversarial verification: the course's /download/ page was fetched (HTML only) and the whole-course bundle it links was checked with HEAD only (200 application/zip; never downloaded); coverage windows stored per W-QUIZ/W-FINAL; SEALED, T5-CURATION, TOPIC-LIST and X1-SCOPE reworded; S-SOURCE and X5 added.",
+  "license": "MIT OpenCourseWare, CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/); credit 'MIT OpenCourseWare'"
+}

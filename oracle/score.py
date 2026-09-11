@@ -39,8 +39,8 @@ from oracle.backend import Backend, DbRef, get_backend
 from oracle.rank_and_seal import (JsonArgumentParser, atomic_write, prediction_paths, pretty_json, read_sealed,
                                   round6, validate_prediction)
 
-EXIT_UNSEALED = 5   # no seal, or the prediction does not verify: scoring refused
-EXIT_NO_KEY = 6     # no human answer key (and no machine key allowed / available)
+EXIT_UNSEALED = config.EXIT_UNSEALED   # 5: no seal, or the prediction does not verify: scoring refused
+EXIT_NO_KEY = config.EXIT_NO_KEY       # 6: no human answer key (and no machine key allowed / available)
 KEY_COLUMNS = ("exam_id", "problem", "points", "topic_ids")
 KeyShares = list[tuple[str, str, float]]  # (problem part, topic_id, points on that topic)
 

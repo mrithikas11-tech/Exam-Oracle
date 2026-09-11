@@ -58,7 +58,8 @@ from sklearn.linear_model import LogisticRegression
 
 from oracle import config
 from oracle.backend import Backend, DbRef, get_backend
-from oracle.lessons_store import FEATURES, SIGNALS, LessonsStore, make_record, predict_p, validate_weights
+from oracle.lessons_store import (FEATURES, SIGNAL_LABELS, SIGNALS, LessonsStore, make_record, predict_p,
+                                  validate_weights)
 from oracle.read_lessons import ScriptArgumentParser, non_negative_int, parse_cli, resolve_lessons
 
 C_REGULARISATION = 0.5    # prediction-model.md: "keep regularization strong (C ~ 0.5)"
@@ -66,8 +67,7 @@ MAX_ITER = 100            # scikit-learn's default for lbfgs
 MIN_RUNS = 2
 CONSTANT_SPREAD = 1e-12   # max - min at or below this: the signal did not vary
 LITTLE_EFFECT = 0.05      # |weight| below this reads as "has little effect"
-SIGNAL_LABELS = {"x1": "Track record", "x2": "Coverage", "x3": "Homework echo", "x4": "Lecture time",
-                 "x5": "Untested recent material", "x6": "Already tested", "x7": "Professor said"}  # spec table
+# SIGNAL_LABELS (the spec table's display names) now live in lessons_store, next to FEATURES; re-exported here.
 
 TRAINING_SQL = """
 SELECT p.run_id, r.run_seq, r.course, r.cold_start, p.feature_set, l.key_source, p.topic_id,

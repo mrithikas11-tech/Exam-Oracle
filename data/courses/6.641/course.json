@@ -1,0 +1,182 @@
+{
+  "course": "6.641",
+  "title": "Electromagnetic Fields, Forces, and Motion",
+  "ocw_url": "https://ocw.mit.edu/courses/6-641-electromagnetic-fields-forces-and-motion-spring-2009/",
+  "published_term": "2009S",
+  "published_term_seq": 20091,
+  "instructor": "Prof. Markus Zahn",
+  "calendar_has_real_dates": false,
+  "assumptions": [
+    {
+      "id": "A1",
+      "text": "exam_type by position. The 2009 'Midterm' (the term's first and only in-term exam) fills the quiz1 slot; 2008 Quiz 1 and 2006 Quiz 1 are quiz1; 2006 Quiz 2 is quiz2; every Final is final. The 2009 term has no quiz2 exam, so 2006 Quiz 2 has no same-type 2009 target: it feeds no x1 in the lesson chain and is useful only as x6 input for the optional 2006 Final history-only run. No makeup/conflict papers exist for 6.641. No practice material is an exam (see A-PACKET)."
+    },
+    {
+      "id": "A-TOPIC",
+      "text": "The topic list is a course-invariant set of labels fixed from the Spring 2009 lecture titles (L1-L19) before any labelling. For other terms it only labels exam problems and must never build x2/x4. T00 'Off-list' keeps unmatched points in the scoring denominator and is never predicted. Do not edit the list after seeing any label. T05 was renamed on 2026-09-11 before any label existed: no answer key, exam_items or tag file for 6.641 exists in the repo or the build scratch, and no ledger database exists yet. Freeze from here: topics.csv sha256 = b9b702386f5ee46307aaafe62179d2ec10da2d77995cd95039aadeb1bb37749d."
+    },
+    {
+      "id": "A-AVAIL",
+      "text": "Every exam that existed before a target is assumed available to students (the Spring 2005 Final Review Packet circulated the 1995/1998/2000 finals). Sensitivity check: documented circulation only."
+    },
+    {
+      "id": "S-ROWS",
+      "text": "sessions.csv has one row per published-term calendar session: 25 rows, Ses #1-#25. Multi-session lectures repeat lecture_n/title/topic_id: L10 = 10-11, L11 = 12-13, L12 = 14-16, L13 = 17-20, L18 = 23-24. The 2009 calendar has no review sessions (is_review false everywhere). Its 'Midterm' row has no SES # and gets no lecture row."
+    },
+    {
+      "id": "S-EXAM",
+      "text": "Midterm session = 12. The calendar lists an unnumbered 'Midterm' row between Ses #10-11 (L10) and Ses #12-13 (L11); the last session delivered before it is 11, so exam.session = 11 + 1 = 12 (sessions 1-11 visible, L11 at session 12 not). PS4/PS5 headers and the paper give Tuesday March 17, 2009. Final session = 26: the Ses #25 KEY DATES cell reads 'Final exam taken one week after Ses #25', and the paper is dated 5/20/2009. session_source 'calendar' covers both of these calendar-derived values."
+    },
+    {
+      "id": "S-HW",
+      "text": "Homework visibility uses the DUE session (strict <); issued sessions are recorded too. PS1-PS5 (due Ses 4, 5, 7, 9, 11) are visible to the Midterm (12); PS6 (due 18) and PS7 (due 21) only to the Final (26). 'Additional problems' (extra practice, undated) has blank sessions and is_practice=true: loaders must not invent a session for it. Treat it as end of term, i.e. invisible to both 2009 targets. The ledger's homework_items.session is NOT NULL, so A does not load 'opt' at all. No 6.641 target could see it, so nothing changes."
+    },
+    {
+      "id": "S-SYNTH",
+      "text": "Other-term exams have no calendar. Their session is a synthetic ordinal that only orders exams within their own term: quiz1 = 1000, quiz2 = 2000, final = 9000; session_source = synthetic. All of them are in earlier terms (term_seq < 20091), so the ordinal never competes with 2009 sessions."
+    },
+    {
+      "id": "S-DATE",
+      "text": "Dates are informational; leakage decisions use (term_seq, session). sessions.csv dates are filled only for the 13 sessions where a pset PDF Issued/Due date coincides with that session's calendar KEY DATES entry (all Tue/Thu); the rest are blank. There is no interpolation because the verifier's Tue/Thu inference drifts after Ses #18 (Ses #21 inferred ~4/28 vs PS7 due 4/30)."
+    },
+    {
+      "id": "T-DATING",
+      "text": "Every item is dated from its own header, never from the OCW cover sheet. Every OCW PDF, the 2006/2008 exams and the 2005 packet included, carries a '6.641 ... Spring 2009' OCW cover page."
+    },
+    {
+      "id": "C-MID",
+      "text": "Midterm coverage window = sessions 1-11 (L1-L10). The PS4 header (and again the PS5 header) states 'The exam covers all material up to and including Problem Set #5 material.' PS5 (issued 3/03/09 = Ses #8, due Ses #11; pre-exam material) was read to map 'PS5 material' to lectures, at lecture level only: 5.1 -> L1 (Lorentz force law), 5.2 -> L9 (magnetic diffusion), 5.3 and 5.4 -> L10 (solutions to Laplace's equation in Cartesian coordinates; 5.4 also L8), 5.5 -> L5 (method of images). Its demos include H/M 10.0.1, which the Readings page places at L9. The latest lecture used is L10 (Ses #10-11), so the window is 1-11, i.e. everything taught before the Midterm."
+    },
+    {
+      "id": "C-FIN",
+      "text": "The Final's cumulative flag is ASSUMED: no statement of its coverage exists anywhere (syllabus, calendar, psets). coverage_from_session and coverage_to_session are blank because the contract reserves them for stated windows (ledger-schema.sql, run_context.py). sql/coverage_window.sql therefore derives the window [1, 25] from cumulative = true and labels it window_source 'cumulative', the honest label. x2 is unchanged: a stored 1-25 window gave the same range. This matches 18.06 A-FINAL. L16/L17 were not taught in 2009 (Lecture Notes page), so topics T15/T16 have taught_in_published_term=false and no sessions, giving x2 = x4 = 0 for them."
+    },
+    {
+      "id": "T-L16L17",
+      "text": "L16 and L17 are kept as separate untaught topics (T15, T16). The research draft's merge of L16 into taught L18 was undone (verifier). Untaught topics stay in the list so earlier-term problems on them (the 2005 calendar taught these lectures) are labelled rather than pushed into T00."
+    },
+    {
+      "id": "A-PACKET",
+      "text": "The 1995, 1998 and 2000 finals are known only from the Spring 2005 Final Review Packet, one 35-page PDF. PDF page = printed TOC page + 1, because PDF p.1 is the OCW cover. Its machine-readable page map is the top-level key packet_sections, and A slices the PDF by it (LOADER-PACKET). Practice Problems (PDF pp. 3-7) and 'Solutions to Two More Problems' (pp. 19-22, no source exam stated) are NOT exams and are never loaded; the packet itself is not an exam. The packet does not state a season, so spring is assumed, like every dated 6.641 offering (2005, 2006, 2008, 2009); dates are blank. For these partial papers an unobserved problem means 'unobserved', not 'topic absent' (runlist T9). The ledger cannot express that, so x1 counts every unobserved problem as absent. Recency weight is NOT negligible. sql/x1_track_record.sql sets w = 0.7^d, where d = the number of DISTINCT prior exam terms strictly between e and T; it does not count offerings. With all three packet finals loaded they would carry 38.7% of x1 weight for the 2009 Final (2008 1.0, 2006 0.7, 2000 0.49, 1998 0.343, 1995 0.240), 60.5% for the 2008 Final history run and 100% for the 2006 Final history run. DECISION (B, 2026-09-11): 6.641-final-1995S is role=excluded because only Problems 1 and 5 were observed, so most of its topics would count as absent. It gets no ledger rows and no items. 1998 (Problems 1-5 listed) and 2000 (Problems 1, 2, 4, 5; P3 unobserved) remain x1 inputs. Resulting x1 weights, once items are loaded: 2009 Final = 2008 1.0, 2006 0.7, 2000 0.49, 1998 0.343 (packet share 32.9%); 2008 Final = 2006 1.0, 2000 0.7, 1998 0.49 (54.3%); 2006 Final = 2000 1.0, 1998 0.7 (100%). PRE-REGISTERED sensitivity arm S-NOPACKET: rerun each final without 1998 and 2000 as well, and report both results. Under that arm the 2009 Final's x1 = 2008 + 2006, the 2008 Final's x1 = 2006 only, and the 2006 Final has no x1 prior."
+    },
+    {
+      "id": "P1-DEFERRED",
+      "text": "The 6.641 Spring 2005 OCW site (2003-2005 exams, 11 psets, its own calendar) is NOT adopted (G0 decision deferred)."
+    },
+    {
+      "id": "ROLES",
+      "text": "2009 Midterm and 2009 Final are target_full; the runlist's M1 is the 2009 Midterm. 2008 Quiz 1, 2008 Final and 2006 Final are target_history: they form the optional history-only side track (runlist section 2, order 2006 F -> 2008 Q1 -> 2008 F). The 2008 Final is also the kit's M1 as decisions-log G0 and staging-plan G2 still record it. Both M1 choices can be addressed from this file, and choosing between them is a decisions-log call for the team. role is single-valued, and target_history rows are also x1/x6 inputs to later targets. 2006 Quiz 1, 2006 Quiz 2 and the 2000 and 1998 finals are x1_input. 2006 Q1/Q2 have no same-type prior (P1 deferred), so they cannot be targets. The 1995 Final is excluded (A-PACKET). No 6.641 exam is sealed (SKIP)."
+    },
+    {
+      "id": "TOTALS",
+      "text": "total_points = 100 for the 2009 Midterm and Final (from the verified research, a sum of points printed on each paper). Other totals are blank, left for A's extraction."
+    },
+    {
+      "id": "NO-CONTENT",
+      "text": "These files record no content of any exam problem: no topics, descriptions or per-problem points. The research's descriptive fields about the 2009 papers (trap T6) were not copied. No 2009 exam paper was opened, and neither was any 2006 or 2008 paper: their URLs were resolved from OCW resource pages and checked with HTTP HEAD only. The 2005 review packet (x1 input only, never a target) was opened for its table of contents, its section headers and the first lines under three headers. A verifier's pdftotext header scan then confirmed the section page ranges. Nothing from the packet is recorded beyond section names, problem numbers and page ranges (packet_sections)."
+    },
+    {
+      "id": "G-SOURCES",
+      "text": "Guidelines hold only verbatim text from pages students saw before the exam: PS4 header (source session 6) and the syllabus (source session 1, assumed posted at term start). Excluded as guidelines: format notes printed on the 2009 papers themselves (seen only at the exam), the OCW Exams-page 'ALLOWED FORMULA SHEETS' column, the Lecture Notes page note on L16/L17 (OCW post-publication prose, trap T4; used only as topic structure), and the calendar's 'Final exam taken one week after Ses #25' (used only to set the Final's session). The Final has no coverage guideline because none exists."
+    },
+    {
+      "id": "VOCAB",
+      "text": "Conventions shared with the other course folders: booleans are lowercase true/false; an empty cell is NULL; lecture_ns is ';'-separated; guideline_id = <course>-G<nn> (the ledger key is global); session_source is calendar or synthetic; homework set 'opt' = OCW 'Additional problems' (file pset_opt); role is one of target_full, target_history, x1_input, sealed_reveal, excluded. topics.csv first_session/last_session are SESSION numbers, and they are what the ledger's topics.first_lecture/last_lecture carry (LOADER-TOPICS). Guideline kinds add homework_analogous, which is informational (GUIDE-KIND)."
+    },
+    {
+      "id": "LOADER-TOPICS",
+      "text": "The ledger's topics.first_lecture / last_lecture are set to topics.csv first_session / last_session. These are SESSION numbers, which is how sql/x7_professor_said.sql reads them when a topic has no visible lecture. Never derive them from lecture_ns. In 6.641, lecture and session numbers drift apart after L10 (L11 = Ses 12-13, L12 = 14-16, L13 = 17-20, L14 = 21, L15 = 22, L18 = 23-24, L19 = 25). A lecture_ns-derived span puts T10 (L11, taught at Ses 12-13, after the Midterm) inside the Midterm's stated window 1-11, which gives it a false x7 on 6.641-quiz1-2009S. This was checked in DuckDB with the contract DDL and the x7 SQL on 2026-09-11. Bounds are NULL for T00 and for the untaught T15/T16. T00 IS loaded into the ledger topics table, because the Cognee tagger's strict ontology and score.py's fixed-list check both read that table (T00-RANK). In 6.003 and 18.06 lecture_n = session, so both derivations agree there. The ledger-schema.sql comment 'lecture range in the published term' contradicts the x7 SQL and needs a contract fix by its owner; until then this rule governs."
+    },
+    {
+      "id": "LOADER-ROLES",
+      "text": "Load the exams row and its exam_items for roles target_full, target_history and x1_input. For role = excluded, load no ledger rows at all (6.641-final-1995S). For role = sealed_reveal, load the exams row only and never its items (6.641 has none). role never selects x1 inputs: x1 selects by exam_type, visibility and tagged items. A target's own row and items are kept out of its run database by the leakage check (SKIP)."
+    },
+    {
+      "id": "LOADER-PACKET",
+      "text": "6.641-final-1998S and 6.641-final-2000S share one PDF, the packet, with problems_url = solutions_url. Slice it by packet_sections: only sections with load = true become exam_items, each under its own exam_id. Never load PDF pp. 1-7 (cover, contents, Practice Problems) or pp. 19-27 ('Two More Problems' and the excluded 1995 final). Each section restates a problem before its solution. Keep the statement for exam_items.text_clean, strip the solution text, and keep the printed problem numbers without renumbering. total_points is blank for these papers."
+    },
+    {
+      "id": "T00-RANK",
+      "text": "T00 must never be predicted, but nothing downstream enforces this yet (oracle/*.py and sql/*.sql have no T00 handling). rank_and_seal.py ranks every topic of the fixed list. Baseline B (sql/baseline_last_exam.sql, rank_and_seal.baseline_last_exam) ranks by last-exam points, so T00 can come first. choose_k's median counts T00. score.py refuses an answer-key row whose topic is not in the prediction. Structure-side choice: keep T00 in the ledger topics table and in the prediction object, so that T00-tagged key rows are accepted and their points stay in the denominator. The owners of rank_and_seal, run_signals and score must then exclude T00 from ranking, the top-K, both baselines and the K median. Until that lands, T00 WILL be ranked like any other topic."
+    },
+    {
+      "id": "GUIDE-KIND",
+      "text": "kind = homework_analogous (6.641-G03, G04) is a structure-file kind. It is missing from the ledger contract's kind list (the ledger-schema.sql comment) and from oracle/models.py StatedGuideline's Literal. It is informational only. sql/x7_professor_said.sql scores only cumulative, emphasis_window and coverage, so x7 ignores it, and x3 (homework echo) already carries the homework-analogy signal. A loads the rows as-is. Nothing may build a StatedGuideline from them until the contract change lands (schema comment, fixture, decisions-log line, models.py literal)."
+    },
+    {
+      "id": "SKIP",
+      "text": "skip_list.txt lists only the sealed reveal's URLs. 6.641 has no sealed exam, so the file is empty. This departs on purpose from kit sealing rule 1 ('every target exam ... listed in skip_list.txt'): the 2009 Midterm and Final are backtest targets whose items must be loaded, since the Midterm's labels feed the Final's x6. Each backtest target is protected per run by sql/leakage.sql (target_row / target_rows): the target's own exams row and items never enter its run database. Labellers still open the target papers outside the repo. 18.06 A-NOSEAL follows the same rule. The decisions-log line is pending (contract owner)."
+    }
+  ],
+  "sources_note": "MIT OCW 6.641 Spring 2009 (graduate, EECS): home, syllabus, calendar, readings, lecture-notes, assignments and exams pages plus every exam/solution/pset resource page, fetched 2026-09-11. All PDF URLs were resolved from their OCW resource pages and returned HTTP 200 application/pdf on 2026-09-11. PS1-PS5 headers and the PS5 body (pre-exam material) were read with pdftotext. Research inputs: extraction + adversarial verification (all corrections applied) and runlist.md (leakage-clean backtest design). Corrections applied 2026-09-11 after a second adversarial verification of this folder: A-PACKET (1995 excluded; real x1 weights), packet_sections, LOADER-TOPICS/ROLES/PACKET, T00-RANK, GUIDE-KIND, SKIP, C-FIN (Final coverage_* blank), ROLES (target_history), NO-CONTENT, T05 rename.",
+  "license": "CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/), MIT OpenCourseWare",
+  "packet_sections": {
+    "url": "https://ocw.mit.edu/courses/6-641-electromagnetic-fields-forces-and-motion-spring-2009/79ff30b0b9aba18fcc28b444456c842a_MIT6_641s09_exam_review.pdf",
+    "title": "6.641 Spring 2005 Final Review Packet",
+    "pdf_pages_total": 35,
+    "page_basis": "1-based PDF page index; PDF p.1 is the OCW cover, so PDF page = printed TOC page + 1",
+    "verified": "section starts from the packet's table of contents (writer) and an independent pdftotext header scan (verifier), 2026-09-11",
+    "sections": [
+      {
+        "pdf_pages": [
+          1,
+          2
+        ],
+        "section": "OCW cover page and front matter (table of contents)",
+        "exam_id": null,
+        "load": false,
+        "reason": "not course material"
+      },
+      {
+        "pdf_pages": [
+          3,
+          7
+        ],
+        "section": "Practice Problems 1-5",
+        "exam_id": null,
+        "load": false,
+        "reason": "practice material is never an exam (A1)"
+      },
+      {
+        "pdf_pages": [
+          8,
+          18
+        ],
+        "section": "Final Exam 1998 Solutions, Problems 1-5",
+        "exam_id": "6.641-final-1998S",
+        "load": true,
+        "reason": "x1 input (A-PACKET)"
+      },
+      {
+        "pdf_pages": [
+          19,
+          22
+        ],
+        "section": "Solutions to Two More Problems, Problems 1 and 5",
+        "exam_id": null,
+        "load": false,
+        "reason": "no source exam stated"
+      },
+      {
+        "pdf_pages": [
+          23,
+          27
+        ],
+        "section": "Final Exam 1995 Solutions, Problems 1 and 5",
+        "exam_id": "6.641-final-1995S",
+        "load": false,
+        "reason": "role excluded: 2 problems observed (A-PACKET)"
+      },
+      {
+        "pdf_pages": [
+          28,
+          35
+        ],
+        "section": "Final Exam 2000 Solutions, Problems 1, 2, 4, 5",
+        "exam_id": "6.641-final-2000S",
+        "load": true,
+        "reason": "x1 input, P3 unobserved (A-PACKET)"
+      }
+    ]
+  }
+}

@@ -30,6 +30,9 @@ from oracle import config
 
 FEATURES = ("x1", "x2", "x3", "x4", "x5", "x6", "x7")
 SIGNALS = ("intercept", *FEATURES)
+# Display names of the signals (prediction-model.md "Seven signals" table), for statements and C's charts.
+SIGNAL_LABELS = {"x1": "Track record", "x2": "Coverage", "x3": "Homework echo", "x4": "Lecture time",
+                 "x5": "Untested recent material", "x6": "Already tested", "x7": "Professor said"}
 RECORD_KEYS = ("run_seq", "weights", "statements", "supporting_runs")
 MAX_STATEMENT_CHARS = 500
 MAX_METADATA_BYTES = 1024  # HydraDB additional_metadata cap (hydra_db ContextClient.ingest docstring)

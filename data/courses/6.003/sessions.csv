@@ -1,0 +1,26 @@
+course,term,term_seq,session,date,lecture_n,title,topic_id,is_review
+6.003,2011F,20113,1,2011-09-08,1,Signals and Systems,T01,false
+6.003,2011F,20113,2,2011-09-13,2,Discrete-Time (DT) Systems,T02,false
+6.003,2011F,20113,3,2011-09-15,3,"Feedback, Poles, and Fundamental Modes",T03,false
+6.003,2011F,20113,4,2011-09-20,4,Continuous-Time (CT) Systems,T04,false
+6.003,2011F,20113,5,2011-09-22,5,Z Transform,T05,false
+6.003,2011F,20113,6,2011-09-27,6,Laplace Transform,T06,false
+6.003,2011F,20113,7,2011-09-29,7,Discrete Approximation of Continuous-Time Systems,T07,false
+6.003,2011F,20113,8,2011-10-04,8,Convolution,T08,false
+6.003,2011F,20113,9,2011-10-06,9,Frequency Response,T09,false
+6.003,2011F,20113,10,2011-10-13,10,Feedback and Control,T10,false
+6.003,2011F,20113,11,2011-10-18,11,Continuous-Time (CT) Frequency Response and Bode Plot,T09,false
+6.003,2011F,20113,12,2011-10-20,12,"Continuous-Time (CT) Feedback and Control, Part 1",T10,false
+6.003,2011F,20113,13,2011-10-25,13,"Continuous-Time (CT) Feedback and Control, Part 2",T10,false
+6.003,2011F,20113,14,2011-10-27,14,Fourier Representations,T11,false
+6.003,2011F,20113,15,2011-11-01,15,Fourier Series,T11,false
+6.003,2011F,20113,16,2011-11-03,16,Fourier Transform,T12,false
+6.003,2011F,20113,17,2011-11-08,17,Discrete-Time (DT) Frequency Representations,T13,false
+6.003,2011F,20113,18,2011-11-10,18,Discrete-Time (DT) Fourier Representations,T13,false
+6.003,2011F,20113,19,2011-11-15,19,Relations Among Fourier Representations,T14,false
+6.003,2011F,20113,20,2011-11-17,20,Applications of Fourier Transforms,T15,false
+6.003,2011F,20113,21,2011-11-22,21,Sampling,T16,false
+6.003,2011F,20113,22,2011-11-29,22,Sampling and Quantization,T16,false
+6.003,2011F,20113,23,2011-12-01,23,"Modulation, Part 1",T17,false
+6.003,2011F,20113,24,2011-12-06,24,"Modulation, Part 2",T17,false
+6.003,2011F,20113,25,2011-12-08,25,Audio CD,T18,false

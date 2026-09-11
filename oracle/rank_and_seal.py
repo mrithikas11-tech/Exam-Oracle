@@ -5,7 +5,11 @@ Spec: kit/02-product/prediction-model.md ("From signals to probability", "Study 
 feature_set), contracts/ledger-schema.sql (`predictions`), kit/03-architecture/rote-plays.md (CLI, exit codes).
 
 CLI:  python -m oracle.rank_and_seal --run-id r7-FX.101-final-2022F --course FX.101 \
-          --target-exam FX.101-final-2022F --signals signals.json [--cold-start] [--made-at 2026-09-11T13:12:04-07:00]
+          --target-exam FX.101-final-2022F --signals signals.json [--lessons <read_lessons output>] [--cold-start]
+          [--made-at 2026-09-11T13:12:04-07:00]
+--signals and --lessons each take a file path, '-' (stdin) or inline JSON (how oracle.backtest and a Rote step pass
+an earlier step's output). --lessons is `python -m oracle.read_lessons --before-run-seq <seq>` output (Play 2 step
+read_lessons -> rank_and_seal); without it the lessons store's latest version is read.
 Prints ONE JSON object {ok, run_id, hash, made_at, k, top_k, ...}. Exit 0 ok | 1 hard fault (bad input, missing
 ledger rows, refusing to re-seal) | 4 leakage (x2..x6 != 0 on an exam_history run, or lessons from this run or later).
 
@@ -39,7 +43,6 @@ Design decisions:
 """
 from __future__ import annotations
 
-import argparse
 import fcntl
 import json
 import math
@@ -53,7 +56,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterator, Mapping, NoReturn, Sequence
+from typing import Any, Iterator, Mapping, Sequence
 
 import pandas as pd
 from jsonschema import Draft202012Validator
@@ -82,17 +85,17 @@ class ResealRefused(RuntimeError):
     """The run_id is already sealed with a different prediction."""
 
 
-class JsonArgumentParser(argparse.ArgumentParser):
-    """argparse that reports usage errors as ONE JSON object and exit 1 (argparse's own exit 2 would read as the
-    skip-list lane in rote-plays.md)."""
-
-    def error(self, message: str) -> NoReturn:
-        config.emit({"ok": False, "error": f"usage: {message}"})
-        sys.exit(config.EXIT_HARD)
+# argparse that reports usage errors as ONE JSON object and exit 1 (argparse's own exit 2 would read as the skip-list
+# lane in rote-plays.md). One shared copy lives in oracle.config.
+JsonArgumentParser = config.ScriptParser
 
 
 def read_json_arg(value: str) -> Any:
-    """JSON from a file path, or from stdin when value is '-'."""
+    """JSON given inline (a value starting with '{' or '['), from stdin when value is '-', else from a file path.
+    Inline JSON is how an orchestrator or a Rote step hands over an earlier step's output (@N)."""
+    text = value.strip()
+    if text.startswith(("{", "[")):
+        return json.loads(text)
     return json.loads(sys.stdin.read() if value == "-" else Path(value).read_text(encoding="utf-8"))
 
 
@@ -383,11 +386,29 @@ def seal(obj: Mapping[str, Any], directory: str | os.PathLike | None = None) -> 
 
 
 # ------------------------------------------------------------------ the step
+def lessons_weights(record: Any) -> tuple[dict[str, float], int | None]:
+    """(weights, lessons_run_seq) of a lessons record: oracle.read_lessons output or LessonsStore.read_latest().
+    run_seq null means "the cold-start weights" (prediction.schema.json lessons_run_seq), so a null run_seq with
+    any other weights is refused, as is the output of a failed read ({"ok": false})."""
+    if not isinstance(record, Mapping) or record.get("ok") is False:
+        raise ValueError("lessons must be one lessons record (the JSON object oracle.read_lessons prints)")
+    weights = validate_weights(record.get("weights"))
+    seq = record.get("run_seq")
+    if seq is None:
+        if weights != cold_start_weights():
+            raise ValueError("a lessons record with run_seq null must carry the cold-start weights")
+        return weights, None
+    if isinstance(seq, bool) or not isinstance(seq, int) or seq < 0:
+        raise ValueError(f"lessons run_seq must be a non-negative integer or null, got {seq!r}")
+    return weights, seq
+
+
 def rank_and_seal(run_id: str, course: str, target_exam: str, signals_data: Any, *, cold_start: bool = False,
                   made_at: str | None = None, backend: Backend | None = None,
-                  lessons_store: LessonsStore | None = None,
+                  lessons_store: LessonsStore | None = None, lessons: Mapping[str, Any] | None = None,
                   directory: str | os.PathLike | None = None) -> dict[str, Any]:
-    """Rank, seal and record one prediction; returns the summary the CLI prints."""
+    """Rank, seal and record one prediction; returns the summary the CLI prints. `lessons` (read_lessons output)
+    replaces the store's latest version; either way lessons from this run or later are refused (exit 4)."""
     config.validate_id(course, what="course")
     config.validate_id(target_exam, what="target_exam")
     run_seq = parse_run_id(run_id, target_exam)
@@ -412,8 +433,8 @@ def rank_and_seal(run_id: str, course: str, target_exam: str, signals_data: Any,
     if cold_start:
         weights, lessons_seq = cold_start_weights(), None
     else:
-        record = (lessons_store or get_lessons_store()).read_latest()
-        weights, lessons_seq = record["weights"], record["run_seq"]
+        record = lessons if lessons is not None else (lessons_store or get_lessons_store()).read_latest()
+        weights, lessons_seq = lessons_weights(record)
         if lessons_seq is not None and lessons_seq >= run_seq:
             raise LeakageError(f"latest lessons come from run_seq {lessons_seq} >= this run's {run_seq}: they were "
                                f"fitted on this target's label; runs go forward in time only")
@@ -446,13 +467,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-id", required=True, help="r<seq>-<target_exam>")
     parser.add_argument("--course", required=True)
     parser.add_argument("--target-exam", required=True)
-    parser.add_argument("--signals", required=True, help="signals JSON file, or '-' for stdin")
+    parser.add_argument("--signals", required=True, help="run_signals output: a file, '-' for stdin, or inline JSON")
+    parser.add_argument("--lessons", help="read_lessons output (a file, '-' or inline JSON); default: the lessons "
+                                          "store's latest version")
     parser.add_argument("--cold-start", action="store_true", help="use COLD_START_WEIGHTS instead of the lessons")
     parser.add_argument("--made-at", help="ISO-8601 timestamp with offset (default: now)")
     args = parser.parse_args(argv)
+    if args.signals == "-" and args.lessons == "-":
+        parser.error("only one of --signals and --lessons can read stdin")
     try:
+        lessons = read_json_arg(args.lessons) if args.lessons else None
         out = rank_and_seal(args.run_id, args.course, args.target_exam, read_json_arg(args.signals),
-                            cold_start=args.cold_start, made_at=args.made_at)
+                            cold_start=args.cold_start, made_at=args.made_at, lessons=lessons)
     except LeakageError as exc:
         config.emit({"ok": False, "leakage": True, "error": str(exc)})
         return config.EXIT_LEAKAGE

@@ -19,9 +19,8 @@ import argparse
 import json
 import math
 import re
-import sys
 from dataclasses import asdict, dataclass
-from typing import Any, NoReturn
+from typing import Any
 
 from oracle import config, ordering
 from oracle.backend import Backend, DbHandle, DbRef, RUN_DB_PREFIX, run_db_name
@@ -189,13 +188,9 @@ def db_label(ref: DbRef) -> Any:
 
 
 # ------------------------------------------------------------------ CLI conventions
-class JsonArgumentParser(argparse.ArgumentParser):
-    """argparse that reports usage errors as ONE JSON object and exit code 1 (rote-plays.md), instead of
-    argparse's plain-text exit 2, which would read as EXIT_SKIP_LIST."""
-
-    def error(self, message: str) -> NoReturn:
-        config.emit({"ok": False, "error": f"usage: {message}"})
-        sys.exit(config.EXIT_HARD)
+# argparse that reports usage errors as ONE JSON object and exit code 1 (rote-plays.md), instead of argparse's
+# plain-text exit 2, which would read as EXIT_SKIP_LIST. One shared copy lives in oracle.config.
+JsonArgumentParser = config.ScriptParser
 
 
 def add_run_args(parser: argparse.ArgumentParser, *, run_db: bool = True) -> None:

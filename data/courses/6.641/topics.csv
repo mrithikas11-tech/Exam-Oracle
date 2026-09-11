@@ -1,0 +1,20 @@
+course,topic_id,topic,first_session,last_session,lecture_ns,taught_in_published_term,grounding
+6.641,T00,Off-list (not in topic list),,,,false,"Scoring bucket, not a lecture topic: an exam problem (or part) matching no listed topic is tagged T00. Never predicted; its points stay in the scoring denominator (runlist trap T1)."
+6.641,T01,Maxwell's equations: integral and differential forms,1,2,1;2,true,Calendar/Lecture Notes titles L1 'Integral form of Maxwell's equations' (Ses #1) and L2 'Differential form of Maxwell's equations' (Ses #2).
+6.641,T02,EQS and MQS fields and boundary conditions,3,3,3,true,L3 title 'Electroquasistatic (EQS) and magnetoquasistatic (MQS) fields and boundary conditions' (Ses #3); keeps the title's word 'fields' (verifier topic_list_issues).
+6.641,T03,Scalar electric potential and the Coulomb superposition integral,4,4,4,true,L4 title 'The scalar electric potential and the Coulomb superposition integral' (Ses #4).
+6.641,T04,Method of images,5,5,5,true,L5 title 'Method of images' (Ses #5).
+6.641,T05,Vector Poisson equation and Biot-Savart superposition (MQS),6,6,6,true,"L6 title 'Magnetoquasistatics' (Ses #6) is an umbrella over T02/T07/T08/T12, so it is renamed (verifier topic_list_issues) from the L6 OCW resource description: 'MQS governing equations, uniqueness, vector Poisson's equation, boundary conditions, Biot–Savart superposition integral'. Renamed again on 2026-09-11, before any label existed: the leading words 'MQS fields' were dropped so the name no longer opens like T02 'EQS and MQS fields and boundary conditions' (tagger confusion risk)."
+6.641,T06,Polarization and conduction,7,7,7,true,L7 title 'Polarization and conduction' (Ses #7).
+6.641,T07,Magnetization,8,8,8,true,L8 title 'Magnetization' (Ses #8).
+6.641,T08,Magnetic diffusion phenomena,9,9,9,true,L9 title 'Magnetic diffusion phenomena' (Ses #9).
+6.641,T09,Laplace's equation in Cartesian coordinates,10,11,10,true,L10 title 'Solutions to Laplace's equation in Cartesian coordinates' (Ses #10-11); last lecture before the Midterm.
+6.641,T10,Laplace's equation in polar and spherical coordinates,12,13,11,true,L11 title 'Solutions to Laplace's equation in polar and spherical coordinates' (Ses #12-13); first lecture after the Midterm.
+6.641,T11,Electroquasistatic forces,14,16,12,true,L12 title 'Electroquasistatic forces' (Ses #14-16).
+6.641,T12,Magnetoquasistatic forces,17,20,13,true,L13 title 'Magnetoquasistatic forces' (Ses #17-20).
+6.641,T13,Fields and moving media,21,21,14,true,L14 title 'Fields and moving media' (Ses #21).
+6.641,T14,"Force densities, stress tensors, and forces",22,22,15,true,L15 title verbatim (Ses #22); the research draft's added word 'Maxwell' removed (verifier topic_list_issues).
+6.641,T15,Elastic waves on a thin rod,,,16,false,"L16 title. NOT TAUGHT in 2009: Lecture Notes page 'Topics L16 and L17 were not covered in 2009, but are included here for completeness.'; absent from the calendar. Kept as its own label (no longer merged into taught L18, verifier) so earlier-term problems on it are labelled, not forced into T00."
+6.641,T16,Transient waves on transmission lines,,,17,false,"L17 title. NOT TAUGHT in 2009 (same Lecture Notes page note); absent from the calendar. Kept as its own label so earlier-term problems on it are labelled, not forced into T00."
+6.641,T17,Waves and instabilities in elastic media,23,24,18,true,L18 title 'Waves and instabilities in elastic media' (Ses #23-24); separated from untaught L16 (verifier).
+6.641,T18,Waves and instabilities in the presence of motion,25,25,19,true,L19 title 'Waves and instabilities in the presence of motion' (Ses #25).

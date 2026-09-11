@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -205,23 +206,41 @@ def test_settings_defaults_and_choices(oracle_env, monkeypatch):
         config.get_settings()
 
 
-def test_configure_cognee_env(oracle_env, monkeypatch, tmp_path):
-    _unset_after_test(monkeypatch, "DATA_ROOT_DIRECTORY", "SYSTEM_ROOT_DIRECTORY")
-    if "cognee" in sys.modules:
-        pytest.skip("cognee already imported by another test")
+_COGNEE_ENV_SCRIPT = textwrap.dedent("""
+    import os, sys
+    from pathlib import Path
+    from types import SimpleNamespace
+    from oracle import config
+    for name in ("DATA_ROOT_DIRECTORY", "SYSTEM_ROOT_DIRECTORY", "COGNEE_LOGS_DIR"):
+        os.environ.pop(name, None)
+    local = Path(os.environ["ORACLE_LOCAL_DIR"]).resolve()
     effective = config.configure_cognee_env()
-    local = Path(oracle_env).resolve()
     assert effective == {"DATA_ROOT_DIRECTORY": str(local / "cognee" / "data"),
-                         "SYSTEM_ROOT_DIRECTORY": str(local / "cognee" / "system")}
+                         "SYSTEM_ROOT_DIRECTORY": str(local / "cognee" / "system"),
+                         "COGNEE_LOGS_DIR": str(local / "cognee" / "logs")}, effective
     assert all(Path(p).is_dir() for p in effective.values())
     assert "cognee" not in sys.modules                          # the helper itself never imports cognee
-    explicit = tmp_path / "explicit-data"
-    monkeypatch.setenv("DATA_ROOT_DIRECTORY", str(explicit))  # an explicit setting is respected
+    explicit = local / "explicit-data"
+    os.environ["DATA_ROOT_DIRECTORY"] = str(explicit)           # an explicit setting is respected
     assert config.configure_cognee_env()["DATA_ROOT_DIRECTORY"] == str(explicit) and explicit.is_dir()
-    monkeypatch.delenv("SYSTEM_ROOT_DIRECTORY")
-    monkeypatch.setitem(sys.modules, "cognee", SimpleNamespace())  # simulate "cognee already imported"
-    with pytest.raises(RuntimeError):
+    del os.environ["SYSTEM_ROOT_DIRECTORY"]
+    sys.modules["cognee"] = SimpleNamespace()                   # simulate "cognee already imported"
+    try:
         config.configure_cognee_env()
+    except RuntimeError:
+        print("ok")
+    else:
+        raise AssertionError("expected RuntimeError: storage unset after cognee was imported")
+""")
+
+
+def test_configure_cognee_env(tmp_path):
+    """In a fresh interpreter: once any test has imported cognee, "before the import" cannot be recreated in
+    this process (the in-process version was skipped whenever a cognee test ran first)."""
+    env = {**os.environ, "ORACLE_SKIP_DOTENV": "1", "ORACLE_LOCAL_DIR": str(tmp_path)}
+    done = subprocess.run([sys.executable, "-c", _COGNEE_ENV_SCRIPT], cwd=REPO, env=env,
+                          capture_output=True, text=True, timeout=120)
+    assert done.returncode == 0 and done.stdout.strip() == "ok", done.stdout + done.stderr
 
 
 def test_canonical_json_and_hash():

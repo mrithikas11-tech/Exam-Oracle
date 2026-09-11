@@ -34,7 +34,6 @@ first course, log it in kit/07-reference/decisions-log.md and pass --tau for eve
 """
 from __future__ import annotations
 
-import argparse
 import math
 import re
 import sys
@@ -497,12 +496,8 @@ def run(course: str, *, tau: float | None = None, method: str = "auto", top_n: i
     return summary
 
 
-class _JsonArgumentParser(argparse.ArgumentParser):
-    """Usage errors are printed as one JSON object and exit EXIT_HARD (argparse's own exit 2 means skip-list)."""
-
-    def error(self, message: str) -> None:  # type: ignore[override]
-        config.emit({"ok": False, "error": f"usage: {message}"})
-        raise SystemExit(config.EXIT_HARD)
+# Usage errors are printed as one JSON object and exit EXIT_HARD (argparse's own exit 2 means skip-list).
+_JsonArgumentParser = config.ScriptParser
 
 
 def main(argv: list[str] | None = None) -> int:

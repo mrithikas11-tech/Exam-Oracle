@@ -1,0 +1,20 @@
+course,topic_id,topic,first_session,last_session,lecture_ns,taught_in_published_term,grounding
+6.003,T00,Off-list (not in topic list),,,,false,Scoring bucket for exam points on material outside T01-T18. Never predicted; its points stay in the scoring denominator
+6.003,T01,Signals and systems,1,1,1,true,L1 'Signals and Systems' (lecture-notes page; calendar row 1 'Signals and systems')
+6.003,T02,Discrete-time (DT) systems,2,2,2,true,L2 'Discrete-Time (DT) Systems'; Readings TOPICS table row 'DT systems'. Course-description gloss dropped per verifier
+6.003,T03,"Feedback, poles, and fundamental modes",3,3,3,true,"L3 'Feedback, Poles, and Fundamental Modes'"
+6.003,T04,Continuous-time (CT) systems,4,4,4,true,L4 'Continuous-Time (CT) Systems'; Readings row 'CT systems'. Course-description gloss dropped per verifier
+6.003,T05,Z transform,5,5,5,true,L5 'Z Transform'; Readings row 'Z transforms'
+6.003,T06,Laplace transform,6,6,6,true,L6 'Laplace Transform'; Readings row 'Laplace transforms'
+6.003,T07,Discrete approximation of continuous-time systems,7,7,7,true,L7 'Discrete Approximation of Continuous-Time Systems'
+6.003,T08,Convolution,8,8,8,true,L8 'Convolution'; Readings row 'Convolution'
+6.003,T09,Frequency response and Bode plot,9,11,9;11,true,L9 'Frequency Response' + L11 'Continuous-Time (CT) Frequency Response and Bode Plot'; Readings row 'Frequency response'. Interleaves with T10; verifier: defensible (L9 opens with CT examples); no exam boundary crossed
+6.003,T10,Feedback and control,10,13,10;12;13,true,"L10 'Feedback and Control' + L12/L13 'Continuous-Time (CT) Feedback and Control, Part 1/Part 2'; Readings row 'Feedback'. Verifier: L10 is a control case study; no exam boundary crossed"
+6.003,T11,Fourier representations and CT Fourier series,14,15,14;15,true,L14 'Fourier Representations' + L15 'Fourier Series'; Readings row 'CT Fourier series'. Renamed per verifier (was 'Fourier series')
+6.003,T12,CT Fourier transform,16,16,16,true,L16 'Fourier Transform'; Readings row 'CT Fourier transform'. CT qualifier added per verifier
+6.003,T13,DT frequency and Fourier representations,17,18,17;18,true,L17 'Discrete-Time (DT) Frequency Representations' + L18 'Discrete-Time (DT) Fourier Representations'; Readings rows 'DT Fourier series'/'DT Fourier transform'. Renamed per verifier (was 'Discrete-time Fourier series and transform')
+6.003,T14,Relations among Fourier representations,19,19,19,true,L19 'Relations Among Fourier Representations'
+6.003,T15,Applications of Fourier transforms,20,20,20,true,L20 'Applications of Fourier Transforms'
+6.003,T16,Sampling and quantization,21,22,21;22,true,L21 'Sampling' + L22 'Sampling and Quantization'; Readings row 'Sampling'
+6.003,T17,Modulation,23,24,23;24,true,"L23/L24 'Modulation, Part 1/Part 2'; Readings row 'Modulation'"
+6.003,T18,Audio CD,25,25,25,true,L25 'Audio CD' (lecture-notes page and calendar; the PDF title slide reads 'From LPs to CDs')

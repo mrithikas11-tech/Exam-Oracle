@@ -31,7 +31,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, NoReturn
 from urllib.parse import urlsplit
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -64,8 +64,11 @@ SECRET_ENV = ("HOTDATA_API_KEY", "HOTDATA_WORKSPACE", "HYDRADB_API_KEY", "LLM_AP
 EXIT_OK = 0
 EXIT_HARD = 1        # hard fault: HTTP error, load failure, service error, bad config
 EXIT_SKIP_LIST = 2   # a skip-listed (sealed) URL was encountered
-EXIT_VALIDATION = 3  # problem numbering not 1..N or points != printed total
+EXIT_VALIDATION = 3  # problem numbering not 1..N or points != printed total; an invalid answer key (score)
 EXIT_LEAKAGE = 4     # a run database contains a row the target exam may not see
+EXIT_UNSEALED = 5    # score / append_ledger refused: no <run_id>.sha256, or the prediction does not verify
+EXIT_NO_KEY = 6      # score: no human answer key in SEALED_DIR (and no machine key allowed or available)
+EXIT_NO_LLM = 7      # cognee_tag: a live or dry run needs LLM_API_KEY and it is not set
 
 _ID_RE = re.compile(r"[A-Za-z0-9._-]+")
 _HEX64_RE = re.compile(r"[0-9a-f]{64}")
@@ -235,6 +238,10 @@ class Settings:
     def cognee_system_root(self) -> Path:
         return self.local_dir / "cognee" / "system"
 
+    @property
+    def cognee_logs_root(self) -> Path:
+        return self.local_dir / "cognee" / "logs"
+
     def sealed_dir(self) -> Path:
         """SEALED_DIR, validated by resolve_sealed_dir (ConfigError if unset or inside the repo)."""
         return resolve_sealed_dir(self.sealed_dir_raw or "")
@@ -279,7 +286,11 @@ def configure_cognee_env(settings: Settings | None = None) -> dict[str, str]:
     SYSTEM_ROOT_DIRECTORY are already set, create the folders, and return the effective values.
 
     Call BEFORE `import cognee`: its default is a folder inside the installed package (contracts/README.md,
-    Cognee 1.5.4). Raises RuntimeError if cognee is already imported while a variable is still unset."""
+    Cognee 1.5.4). Raises RuntimeError if cognee is already imported while a variable is still unset.
+
+    Also sets COGNEE_LOGS_DIR to <LOCAL_DIR>/cognee/logs when it is unset and cognee is not imported yet: cognee's
+    BaseConfig reads it once at import (cognee/base_config.py, default ~/.cognee/logs) and every import writes a log
+    file there. It is included in the result whenever it is set."""
     s = settings or get_settings()
     wanted = {"DATA_ROOT_DIRECTORY": s.cognee_data_root, "SYSTEM_ROOT_DIRECTORY": s.cognee_system_root}
     missing = [key for key in wanted if not os.environ.get(key, "").strip()]
@@ -287,7 +298,11 @@ def configure_cognee_env(settings: Settings | None = None) -> dict[str, str]:
         raise RuntimeError(f"configure_cognee_env() must run before importing cognee (unset: {', '.join(missing)})")
     for key in missing:
         os.environ[key] = str(wanted[key])
+    if not os.environ.get("COGNEE_LOGS_DIR", "").strip() and "cognee" not in sys.modules:
+        os.environ["COGNEE_LOGS_DIR"] = str(s.cognee_logs_root)
     effective = {key: os.environ[key] for key in wanted}
+    if os.environ.get("COGNEE_LOGS_DIR", "").strip():
+        effective["COGNEE_LOGS_DIR"] = os.environ["COGNEE_LOGS_DIR"]
     for folder in effective.values():
         Path(folder).mkdir(parents=True, exist_ok=True)
     return effective
@@ -310,9 +325,19 @@ def emit(obj: Mapping[str, Any]) -> None:
     sys.stdout.flush()
 
 
+class ScriptParser(argparse.ArgumentParser):
+    """The argument parser of every script: a usage error prints ONE JSON object on stdout and exits EXIT_HARD.
+    argparse's own exit code for a usage error is 2, which the Rote lanes (rote-plays.md) read as EXIT_SKIP_LIST
+    ("a skip-listed, sealed URL was encountered"), so a typo would look like a sealing fault."""
+
+    def error(self, message: str) -> NoReturn:
+        emit({"ok": False, "error": f"usage: {message}"})
+        sys.exit(EXIT_HARD)
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m oracle.config",
-                                     description="Print the resolved configuration (no secret values) as one JSON object.")
+    parser = ScriptParser(prog="python -m oracle.config",
+                          description="Print the resolved configuration (no secret values) as one JSON object.")
     parser.parse_args(argv)
     try:
         settings = get_settings()

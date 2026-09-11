@@ -14,18 +14,20 @@ Consequence: **anything improvised per course will be baked in.** All course-spe
 | `split_problems.py` | exam text | problems JSON with numbers and points | — |
 | `validate.py` | problems JSON | check report | 3 = numbering not 1…N or points ≠ printed total (hard); degraded warning if solutions file missing |
 | `load_hotdata.py` | rows | load into ledger (replace/append) | 1 = load failed (hard) |
-| `cognee_remember.py` | items | tagged items (topics) written back as rows | 1 = service error (hard) |
+| `cognee_remember.py` | items | tagged items (topics) written back as rows | 1 = service error (hard); as built (`oracle/cognee_tag.py`): 2 = sealed exam, 3 = tags outside the topic list, 7 = no `LLM_API_KEY` |
 | `notify_rocketride.py` | message | webhook POST | degraded on failure |
 | `make_run_db.py` | course, target_exam | `run-<id>` created with pre-exam rows | 1 hard |
 | `run_signals.py` | run db | signals table (JSON) | — |
 | `leakage_check.py` | run db, target date | ok/fail | 4 = leakage (hard) |
 | `read_lessons.py` | — | current β from HydraDB | — |
 | `rank_and_seal.py` | signals, β | prediction JSON + SHA-256 | — |
-| `score.py` | prediction, sealed key path | scores vs baselines | reads key only after hash written |
-| `append_ledger.py` | run row | ledger append (idempotency key) | — |
+| `score.py` | prediction, sealed key path | scores vs baselines | reads key only after hash written; 3 = invalid key, 5 = no seal or tampered (refused), 6 = no human key (hard) |
+| `append_ledger.py` | run row | ledger append (idempotency key) | 5 = sealed prediction missing or tampered (hard) |
 | `refit_lessons.py` | all runs | new β + statements | — |
 | `store_lessons.py` | lessons | HydraDB `shared` memories | — |
 | `cognee_feedback.py` | run session, score | `add_feedback` + `improve()` | degraded on failure |
+
+As built (Person B, 2026-09-11): every exit code is a constant in `oracle/config.py` (`EXIT_*`), and every script's usage error prints one JSON object and exits 1 (argparse's own 2 would read as the skip-list lane). `oracle/backtest.py` runs Play 2 as one command, or one `--step` per Rote record, and exits with the failing step's code; `oracle/run_list.py` runs a run list forward in time only.
 
 Package the scripts so a Play runs from `/tmp` (required to publish): install them as a tool declared in `deps.toml`, or embed with `python3 -c`. No `./scripts/...` relative paths `[DOCS]`.
 
@@ -41,6 +43,7 @@ Package the scripts so a Play runs from `/tmp` (required to publish): install th
 
 - **Parameters:** `course`, `target_exam`, `target_date`, `sealed_key_path`.
 - **Steps:** `make_run_db` → `run_signals` → `leakage_check` → `read_lessons` → `rank_and_seal` → `score` → `append_ledger` → `refit_lessons` → `store_lessons` → `cognee_feedback` → `notify_rocketride`.
+- **As built (`python -m oracle.backtest`):** parameters `course`, `target_exam`, `run_seq` (+ `cold_start`). The target's time comes from its ledger `exams` row (the ordering rule), not a date, and the key from `SEALED_DIR/answer_key_<exam_id>.csv`. A `drop_run_db` step closes the chain. See `B_README.md` for the per-step recording.
 - **Why it matters:** the same fixed method, replayed ~10 times during the day, while the lessons it reads keep changing — that is the compounding chart. The seal is deterministic by construction.
 
 ## Recording procedure `[DOCS]`
