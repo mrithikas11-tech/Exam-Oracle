@@ -20,6 +20,7 @@ COMMANDS = {
     "load": ("oracle.load_ledger", "Load a course's homework into homework_items and homework_vec"),
     "summary": ("oracle.summary", "Summarise a load and upsert it into ledger.course_loads"),
     "notify": ("oracle.notify_rocketride", "POST a course-loaded event to the RocketRide webhook"),
+    "llm": ("oracle.llm_profile", "Choose your own LLM (Claude, ChatGPT, Gemini, a local model) for Cognee"),
 }
 
 

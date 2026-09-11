@@ -63,6 +63,22 @@ cd /tmp && rote play run load-course course=2.71 course_url=https://ocw.mit.edu/
 Every command prints one JSON object; exit 0 ok (a `warning` = degraded), 1 hard fault, 2 sealed, 3 validation.
 After a failure: fix, then re-run the same command with `--resume <run_id>` (parameters are required again).
 
+## Bring your own LLM
+
+Every Cognee call (tagging, feedback, lesson wording) uses the provider in `.env`. Pick it with one command; the key
+is asked for with a hidden prompt and stored only in the git-ignored `.env`:
+
+```bash
+exam-oracle llm --provider claude     # claude-opus-5 + free local embeddings (fastembed)
+exam-oracle llm --provider chatgpt    # OpenAI gpt-5-mini + OpenAI embeddings (Cognee's defaults)
+exam-oracle llm --provider gemini --model <gemini model id>
+exam-oracle llm --provider ollama --model <model> --endpoint <url>      # local model, no key
+exam-oracle llm --show                # what is active (keys never printed)
+exam-oracle llm --check               # one tiny request through the chosen provider
+```
+
+Price the tagging on the chosen model first: `exam-oracle tag --course <c> --dry-run`.
+
 ## Handoffs
 
 **To B:**

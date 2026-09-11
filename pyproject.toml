@@ -9,7 +9,7 @@ description = "Exam Oracle: OCW loader (role A) and model & memory (role B)"
 requires-python = ">=3.10"
 dependencies = [
     "requests>=2.32,<3",
-    "cognee==1.5.4",
+    "cognee[anthropic,fastembed]==1.5.4",
     "duckdb==1.5.5",
     "hotdata==0.9.1",
     "hotdata-framework==0.14.0",

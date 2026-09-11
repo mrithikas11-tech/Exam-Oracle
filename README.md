@@ -25,6 +25,7 @@ The full plan is in [`kit/`](kit/START-HERE.md). Build rules: [`CLAUDE.md`](CLAU
 brew install poppler
 uv tool install --force --editable .                  # from a checkout: exam-oracle + B's modules
 export ORACLE_DATA_DIR=~/exam-oracle-data ORACLE_LOCAL_DIR=~/exam-oracle-data/local-backend
+exam-oracle llm --provider claude                     # or chatgpt / gemini / ollama: your own LLM for Cognee
 exam-oracle ledger-init
 cp -R plays/load-course ~/.rote/flows/
 cd /tmp && rote play run load-course course=6.003 course_url=https://ocw.mit.edu/courses/6-003-signals-and-systems-fall-2011/
