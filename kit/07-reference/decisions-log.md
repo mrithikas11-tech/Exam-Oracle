@@ -33,7 +33,7 @@ Append new entries at the bottom: time, decision, why, who. Entries below were m
 ## Open at G0 (fill in during the event)
 
 - Cognee location: ____ (Cloud / laptop + tunnel)
-- Sponsor nodes present in `services-catalog.json`: ____
+- Sponsor nodes present in `services-catalog.json`: **not in RocketRide 1.3.0's bundled docs** — the extension writes no services-catalog.json; its ROCKETRIDE_COMPONENT_REFERENCE.md lists webhook, tool_http_request, tool_python, agent_rocketride but no tool_cognee / graph_hydradb / db_hotdata. Fallback (risk #2): the agent calls each service's REST API via tool_http_request. Re-check the live catalog after signing in
 - Hosted HydraDB `query_graph` accepts Cypher: ____
 - Cross-dataset Cognee recall merges: ____
 - Rote replay from Python works: **yes** — exit code 0/1 is reliable; output is a human report (rote 0.82 has no `--output=json`)
@@ -95,4 +95,5 @@ Append new entries at the bottom: time, decision, why, who. Entries below were m
 | 15:35 | Cognee tagging priced first (`dry_run=True`): 95 exam problems ≈ **$3.06**, 1.8 M tokens (gpt-5-mini; Cognee warns it can vary several-fold); then run live | BUILDER-RULES §12 | A |
 | 15:35 | Ledger runs on the **local DuckDB backend** (`ORACLE_LOCAL_DIR`) until a hotdata API key exists: B's backend uses `hotdata-framework` (`HOTDATA_API_KEY`, `HOTDATA_WORKSPACE`), not the CLI login | No hotdata API key on this machine yet | A |
 | 15:35 | RocketRide back in scope (product owner); the extension (1.3.0) is installed but not signed in to any folder on this machine, so `notify` stays degraded | The extension writes `ROCKETRIDE_URI`/`ROCKETRIDE_APIKEY` into the opened folder's `.env` (extension docs) | A |
-
+| 16:10 | RocketRide on this Mac: extension 1.3.0 opened `Exam Oracle` (only `.rocketride/docs/` written) and the CLI 1.3.0 was fetched via npx, but no sign-in (`.env` has no `ROCKETRIDE_URI`/`ROCKETRIDE_APIKEY`). Sponsor nodes absent from the bundled component reference (see G0 answers) | Kit risk #2; sign in, then check the live catalog before building pipelines | A |
+| 16:10 | Live Cognee tagging blocked: the OpenAI key's account has no credits (`insufficient_quota` / `credit_balance_exhausted`, gpt-5-mini and gpt-4o-mini). Rote/Modiqo provides no model credits; the RocketRide coupon and hotdata's $100 credit do not cover OpenAI | Add OpenAI credit, or switch Cognee to another provider (`LLM_PROVIDER`/`LLM_MODEL` + an embedding provider) and re-price with `--dry-run` | A |
