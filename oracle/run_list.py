@@ -1,5 +1,5 @@
-"""python -m oracle.run_list --list data/run_lists/fixture.csv [--dry-run] [--from-seq N] [--allow-machine-key]
-                            [--allow-machine-labels]
+"""python -m oracle.run_list --list data/run_lists/fixture.csv [--dry-run] [--from-seq N] [--through-seq M]
+                            [--seal-only | --frozen] [--allow-machine-key] [--allow-machine-labels]
 
 Run a CSV run list through oracle.backtest, strictly forward in time: kit/02-product/prediction-model.md "Run list
 (forward in time only)", kit/02-product/data-sources-and-sealing.md sealing rule 5, kit/BUILDER-RULES.md §4.
@@ -10,22 +10,32 @@ File: CSV, one header line, then one row per backtest; lines whose first non-bla
   target_exam  exam_id of the target (<course>-<exam_type>-<term>)
   cold_start   true | false; true = the blank-weights twin of an earlier row with the same target
   feature_set  optional annotation, checked: full iff the target is in the course's published term, else
-               exam_history (contracts/README.md). Other columns (e.g. note) are ignored.
+               exam_history (contracts/README.md). Other columns (e.g. notes) are ignored.
+
+The D8 history side track (data/run_lists/history_side_track.csv) needs no special column: its rows are ordinary
+exam_history runs (cold_start = false) whose run_seqs interleave with the main chain in time, so every check below
+applies to them unchanged; refit leaves exam_history runs out of training (decision D4).
 
 Validation, all of it before the first run (any violation: exit 1, nothing runs, every problem is listed):
   * every target is in the ledger's exams table, in the row's course, and that course has a courses row;
   * forward in time: within a course, every non-twin run is strictly later, by (term_seq, session) with an unknown
     session = end of term, than every non-twin run with a smaller run_seq. "Runs" are the rows of the list AND the
     rows already in the ledger's `runs` table (a list row whose run_id is already there is a replay of that run; its
-    cold_start must match). Different courses are ordered by run_seq only: lessons transfer across courses, and the
-    kit's list runs course 2 (possibly 2.71, Spring 2014) before 6.003 (2009-2011).
-  * a twin repeats the target of an earlier non-twin run; one twin per target; its own time is exempt (it re-makes a
-    prediction already made, with the fixed cold-start weights);
+    cold_start must match).
+  * forward in time across courses, by term: lessons transfer across courses, so a non-twin run may not target an
+    earlier term than any non-twin run of ANOTHER course with a smaller run_seq (it would predict with weights
+    learned from a later term's exams). Sessions are numbered per course, so two courses' runs in the SAME term are
+    not ordered against each other (only dates could, and dates are informational).
+  * a twin repeats the target of an earlier non-twin run; one twin per target; its own time is exempt (it re-makes
+    a prediction already made, with the fixed cold-start weights). The ledger's twins count as twins;
   * no other run_id may already hold a row's run_seq in the ledger's `runs` table (backtest's preflight also checks
     `predictions`).
-Then the rows run in file order (from the first row with run_seq >= --from-seq, if given); the first failure stops
-the list and its exit code is the list's. Prints ONE JSON object: {ok, list, rows, runs: [per-run summary],
-failed_run?, evidence?}. --dry-run validates and prints the plan only.
+Then the rows run in file order (only rows with --from-seq <= run_seq <= --through-seq, when given); the first
+failure stops the list and its exit code is the list's. --seal-only and --frozen are passed to every backtest
+(oracle.backtest): the reveal is `--through-seq <reveal - 1>`, then `--from-seq <reveal> --seal-only` (main run and
+twin both sealed), then, on stage, `--from-seq <reveal> --frozen` (replays: the same seals, then scored; no lessons
+version). Prints ONE JSON object: {ok, list, rows, runs:
+[per-run summary], failed_run?, evidence?}. --dry-run validates and prints the plan only.
 """
 from __future__ import annotations
 
@@ -62,6 +72,11 @@ class Row:
     @property
     def run_id(self) -> str:
         return f"r{self.run_seq}-{self.target_exam}"
+
+    @property
+    def kind(self) -> str:
+        """twin (a cold-start run) or main."""
+        return "twin" if self.cold_start else "main"
 
 
 @dataclass(frozen=True)
@@ -177,16 +192,21 @@ def validate(rows: Sequence[Row], exams: Mapping[str, ExamTime],
         elif any(r.run_seq == h.run_seq for r in rows):
             problems.append(f"run_seq {h.run_seq} is already used by ledger run {h.run_id}")
 
-    # (run_seq, course, target, twin, where) for the list rows and the ledger's other runs, in run_seq order
-    timeline = [(r.run_seq, r.course, r.target_exam, r.cold_start, f"line {r.line} ({r.run_id})")
+    # (run_seq, course, target, kind, where) for the list rows and the ledger's other runs, in run_seq order; a
+    # ledger cold-start run not in the list is "ledger_cold" (a twin already made; it is not re-checked)
+    timeline = [(r.run_seq, r.course, r.target_exam, r.kind, f"line {r.line} ({r.run_id})")
                 for r in rows if r.target_exam in exams]
-    timeline += [(h.run_seq, h.course, h.target_exam, h.cold_start, f"ledger run {h.run_id}")
-                 for h in history if h.run_id not in listed and h.target_exam in exams]
+    timeline += [(h.run_seq, h.course, h.target_exam, "ledger_cold" if h.cold_start else "main",
+                  f"ledger run {h.run_id}") for h in history if h.run_id not in listed and h.target_exam in exams]
     latest: dict[str, tuple[tuple[int, int], str]] = {}
     made: set[str] = set()
     twins: set[str] = set()
-    for _, course, exam, twin, where in sorted(timeline, key=lambda e: e[0]):
-        if twin:
+    for _, course, exam, kind, where in sorted(timeline, key=lambda e: e[0]):
+        if kind == "ledger_cold":
+            if exam in made:
+                twins.add(exam)
+            continue
+        if kind == "twin":
             if exam not in made:
                 problems.append(f"{where}: a cold-start twin needs an earlier non-twin run of {exam}")
             elif exam in twins:
@@ -196,6 +216,12 @@ def validate(rows: Sequence[Row], exams: Mapping[str, ExamTime],
         key = exams[exam].key
         if course in latest and key <= latest[course][0]:
             problems.append(f"{where}: {exam} is not later than {latest[course][1]}: runs go forward in time only")
+        later = [(k[0], label) for other, (k, label) in latest.items() if other != course and k[0] > key[0]]
+        if later:
+            term, label = max(later)
+            problems.append(f"{where}: {exam} (term {ordering.seq_to_term(key[0])}) is earlier than {label} (term "
+                            f"{ordering.seq_to_term(term)}) of another course: lessons transfer across courses, so "
+                            f"terms go forward across courses too")
         if course not in latest or key > latest[course][0]:
             latest[course] = (key, f"{exam} ({where})")
         made.add(exam)
@@ -207,14 +233,17 @@ def _compact(summary: Mapping[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in summary.items() if k != "outputs"}
 
 
-def run_list(path: str | Path, *, dry_run: bool = False, from_seq: int | None = None,
-             allow_machine_key: bool = False, allow_machine_labels: bool = False) -> tuple[int, dict[str, Any]]:
+def run_list(path: str | Path, *, dry_run: bool = False, from_seq: int | None = None, through_seq: int | None = None,
+             seal_only: bool = False, frozen: bool = False, allow_machine_key: bool = False,
+             allow_machine_labels: bool = False) -> tuple[int, dict[str, Any]]:
     """Validate the whole list, then run it (module docstring). Returns (exit code, the printed object)."""
+    if seal_only and frozen:
+        raise ValueError("--seal-only and --frozen exclude each other (seal first, then score with --frozen)")
     rows = read_run_list(path)
     be = get_backend()
     ledger = be.ledger()
     problems = validate(rows, load_exam_times(be, ledger), load_ledger_runs(be, ledger))
-    base: dict[str, Any] = {"list": str(path), "rows": len(rows)}
+    base: dict[str, Any] = {"list": str(path), "rows": len(rows), "seal_only": seal_only, "frozen": frozen}
     if problems:
         return config.EXIT_HARD, {"ok": False, **base, "error": "run list refused; nothing ran", "problems": problems}
     if dry_run:
@@ -226,8 +255,12 @@ def run_list(path: str | Path, *, dry_run: bool = False, from_seq: int | None = 
         if from_seq is not None and r.run_seq < from_seq:
             runs.append({"run_id": r.run_id, "skipped": f"before --from-seq {from_seq}"})
             continue
-        bt = backtest.Backtest(r.course, r.target_exam, r.run_seq, cold_start=r.cold_start,
-                               allow_machine_key=allow_machine_key, allow_machine_labels=allow_machine_labels)
+        if through_seq is not None and r.run_seq > through_seq:
+            runs.append({"run_id": r.run_id, "skipped": f"after --through-seq {through_seq}"})
+            continue
+        bt = backtest.Backtest(r.course, r.target_exam, r.run_seq, cold_start=r.cold_start, seal_only=seal_only,
+                               frozen=frozen, allow_machine_key=allow_machine_key,
+                               allow_machine_labels=allow_machine_labels)
         code, summary = backtest.run_backtest(bt)
         runs.append(_compact(summary))
         if code != config.EXIT_OK:
@@ -249,12 +282,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--list", required=True, help="run list CSV (run_seq, course, target_exam, cold_start)")
     parser.add_argument("--dry-run", action="store_true", help="validate against the ledger and print the plan")
     parser.add_argument("--from-seq", type=_positive_int, help="skip rows with a smaller run_seq (resume a list)")
+    parser.add_argument("--through-seq", type=_positive_int, help="skip rows with a larger run_seq (stop before the reveal)")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--seal-only", action="store_true", help="every backtest stops after rank_and_seal (the reveal)")
+    mode.add_argument("--frozen", action="store_true", help="beta is frozen: score and record, write no lessons")
     parser.add_argument("--allow-machine-key", action="store_true", help="passed to every backtest")
     parser.add_argument("--allow-machine-labels", action="store_true", help="passed to every backtest")
     args = parser.parse_args(argv)
     try:
-        code, out = run_list(args.list, dry_run=args.dry_run, from_seq=args.from_seq,
-                             allow_machine_key=args.allow_machine_key, allow_machine_labels=args.allow_machine_labels)
+        code, out = run_list(args.list, dry_run=args.dry_run, from_seq=args.from_seq, through_seq=args.through_seq,
+                             seal_only=args.seal_only, frozen=args.frozen, allow_machine_key=args.allow_machine_key,
+                             allow_machine_labels=args.allow_machine_labels)
     except Exception as exc:  # unreadable list or ledger: a hard fault, one JSON object
         config.emit({"ok": False, "list": args.list, "error": f"{type(exc).__name__}: {exc}"})
         return config.EXIT_HARD

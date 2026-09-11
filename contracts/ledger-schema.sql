@@ -34,10 +34,11 @@ CREATE TABLE courses (
 
 CREATE TABLE topics (                     -- the FIXED topic list (course structure)
   course         VARCHAR NOT NULL,
-  topic_id       VARCHAR NOT NULL,        -- 'T01'..'T20'
+  topic_id       VARCHAR NOT NULL,        -- 'T01'..'T20'; 'T00' = Off-list (D6): loaded, never ranked or predicted
   topic          VARCHAR NOT NULL,        -- 'Fourier series'
-  first_lecture  INTEGER,                 -- lecture range in the published term
-  last_lecture   INTEGER
+  first_lecture  INTEGER,                 -- first SESSION number of the topic in the published term (from topics.csv
+                                          -- first_session, not a lecture number); NULL for T00 and untaught topics
+  last_lecture   INTEGER                  -- last SESSION number (topics.csv last_session); NULL as above
 );
 
 -- ---------------------------------------------------------------- loaded by A
@@ -113,7 +114,7 @@ CREATE TABLE echo_pairs (                 -- precomputed homework<->past-exam si
 CREATE TABLE guidelines (                 -- professor's stated guidance, as numeric claims
   course               VARCHAR NOT NULL,
   guideline_id         VARCHAR NOT NULL,
-  kind                 VARCHAR NOT NULL,  -- cumulative | emphasis_window | coverage | format
+  kind                 VARCHAR NOT NULL,  -- cumulative | emphasis_window | coverage | format | homework_analogous (D7)
   applies_to_exam_type VARCHAR NOT NULL,  -- 'final', 'quiz1', ...
   from_session         INTEGER,
   to_session           INTEGER,

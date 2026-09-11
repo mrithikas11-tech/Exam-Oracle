@@ -29,7 +29,7 @@
     },
     {
       "id": "A-EXSES",
-      "text": "Each 2010S exam occupies its own calendar row, so exam.session = 12, 25, 37, 40 (session_source=calendar). date = paper header, informational only. Exam 3's header 'May 8, 2010' is a Saturday, against the syllabus 'at class times'; the pset due dates fit a Mon/Wed/Fri schedule that puts SES 37 on Fri 7 May 2010. The session index is authoritative."
+      "text": "Each 2010S exam occupies its own calendar row, so exam.session = 12, 25, 37, 40 (session_source=calendar_own_row). date = paper header, informational only. Exam 3's header 'May 8, 2010' is a Saturday, against the syllabus 'at class times'; the pset due dates fit a Mon/Wed/Fri schedule that puts SES 37 on Fri 7 May 2010. The session index is authoritative."
     },
     {
       "id": "A-HW",

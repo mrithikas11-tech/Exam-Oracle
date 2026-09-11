@@ -1,4 +1,5 @@
--- x3  Homework echo.  Spec: kit/02-product/prediction-model.md, signal row x3. Full feature set only.
+-- x3  Homework echo.  Spec: kit/02-product/prediction-model.md, signal row x3. Computed on both feature sets
+-- (D3: visibility decides). Homework tagged T00 (off-list, D6) is left out, so it never sets the max.
 --
 --   echoed(h) <=> an echo_pairs row links homework problem h to a prior exam problem with sim >= tau, where
 --                 the homework AND the exam are both visible to T, and the exam is a non-sealed exam present
@@ -13,6 +14,7 @@ WITH hw AS (
     SELECT DISTINCT h.hw_id, h.topic_id
     FROM {{homework_items}} AS h
     WHERE h.course = $course
+      AND h.topic_id <> 'T00'
       AND @VISIBLE(h.term_seq, h.session)
 ),
 echoed AS (

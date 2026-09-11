@@ -1,4 +1,5 @@
--- x4  Lecture time.  Spec: kit/02-product/prediction-model.md, signal row x4. Full feature set only.
+-- x4  Lecture time.  Spec: kit/02-product/prediction-model.md, signal row x4. Computed for every target (D3);
+-- an exam_history target sees no lecture of its own term, so it gets no rows (x4 = 0).
 --
 --   x4(t) = #(visible lectures on t in T's term with session in [win_from, win_to])
 --           / #(visible lectures in T's term with session in [win_from, win_to])

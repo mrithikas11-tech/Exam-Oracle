@@ -6,7 +6,9 @@ Owner: **Person B**. Change protocol: if you change a contract, update its fixtu
 |---|---|---|
 | `ledger-schema.sql` | hotdata ledger tables | A loads (and B's scripts load `predictions`, `runs`, `lessons`, `guideline_tests`) → B's signal queries, C's dashboard |
 | `prediction.schema.json` | the sealed prediction | B's `rank_and_seal.py` → C's dashboard + reveal |
-| `student.md` | student profile, preferences, feedback, plan | C's app writes/reads ↔ B's Cognee/HydraDB stores |
+| `student.md` | student profile, preferences, feedback, plan, self-description box (§7) | C's app writes/reads ↔ B's Cognee/HydraDB stores |
+| `learning-profile.schema.json` | the self-description PROPOSAL (D9, `student.md` §7): per field a value, a confidence and a verbatim quote | B's `students.py` (`describe` / `extract`) → C's confirm chips; example `fixtures/self_description_examples.json` |
+| `course-structure.md` | course folders `data/courses/<course>/*` (terms, sessions, exams, homework due sessions, guidelines, topics, sealing) and the D8 run lists | B writes (checked by `python -m oracle.structure --course <c> --check`) → A's loader (`oracle.structure.load_course`), which adds only problem/homework content from PDFs |
 | `fixtures/` | small **synthetic** data in every shape | everyone, until real data lands (M1) |
 
 ## The time-ordering rule (applies to every table)
@@ -26,7 +28,8 @@ OR (row.term_seq = T.term_seq AND row.session < T.session)
 
 Consequences (deliberate):
 - A target in the course's **published term** gets all seven signals, from that term's sessions before the exam (`feature_set = "full"`).
-- A target in an **earlier term** cannot see the published term's lectures or problem sets (they are in its future), so x2–x6 are unavailable; only x1 (earlier exams) and x7 (guidance stated before it) apply (`feature_set = "exam_history"`).
+- A target in an **earlier term** (`feature_set = "exam_history"`) cannot see the published term's lectures or problem sets (they are in its future). Decision D3: no signal is forced to zero; every signal is computed from the rows the target can see (in practice x1 from earlier exams, x6 from its own term's earlier exams, x7 from guidance stated before it). Beta is refit only on `full`, non-cold-start runs (D4).
+- **Before / after an exam.** A lecture whose session equals exam E's session was given after E (decision D2 gives an exam that shares a calendar row the last delivered session + 1), so "before E" is `session < E.session` and "after E" is `session >= E.session`.
 - The fixed **topic list** is course structure, not exam content, and is shared by all terms of a course. This is an explicit assumption — state it on stage if asked.
 
 ## Loading and querying (verified against the installed SDKs, 2026-09-11)
@@ -45,4 +48,4 @@ Consequences (deliberate):
 
 ## Ids
 
-As in `kit/03-architecture/data-model.md`: `exam_id = <course>-<exam_type>-<term>` (e.g. `6.003-final-2011F`), `problem` = problem number (+ sub-part letter), `hw_id = <course>-<term>-ps<set>-p<n>`, `run_id = r<seq>-<exam_id>`, `student_id = s<n>`, `topic_id = T01…T20` per course.
+As in `kit/03-architecture/data-model.md`: `exam_id = <course>-<exam_type>-<term>` (e.g. `6.003-final-2011F`), `problem` = problem number (+ sub-part letter), `hw_id = <course>-<term>-ps<set>-p<n>`, `run_id = r<seq>-<exam_id>`, `student_id = s<n>`, `topic_id = T01…T20` per course, plus `T00` ("Off-list", D6): loaded into `topics`, never ranked, predicted or counted in K or a signal; answer-key points tagged T00 stay in the scoring denominator.

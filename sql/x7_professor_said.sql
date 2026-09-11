@@ -7,21 +7,24 @@
 --                  kind = emphasis_window | coverage   -> t's taught span [s_from, s_to] overlaps
 --                                                         [g.from_session, g.to_session] (a missing end is
 --                                                         open: session 1 / end of term)
+--                  kind = homework_analogous (D7)      -> t has >= 1 homework problem visible to T
+--                                                         ("exam problems will be analogous to homework")
 --   t's taught span = min/max session of t's visible lectures in T's term. When t has none (every
 --   exam_history target, or a topic not taught yet) it falls back to the topic list's
---   [first_lecture, last_lecture], read as session numbers -- an approximation (OCW numbers lectures and
---   sessions alike except around exam sessions); the topic list is course structure shared by all terms.
+--   [first_lecture, last_lecture], read as SESSION numbers (the loader fills them from topics.csv
+--   first_session/last_session); the topic list is course structure shared by all terms.
 --   trust(kind) = mean verdict score (match 1, partial 0.5, miss 0) over the guideline tests of that kind
 --   from strictly earlier runs whose target T could see (guideline_trust.sql); 0.5 while a kind has no test.
---   x7(t) = max over covering g of trust(kind(g));  no covering guideline -> 0.
--- Params: course, exam_type, target_term_seq, target_session,
---         trust_cumulative, trust_emphasis_window, trust_coverage.  Returns (topic_id, x7).
+--   x7(t) = max over covering g of trust(kind(g));  no covering guideline -> 0.  T00 (off-list, D6) never
+--   gets a row.
+-- Params: course, exam_type, target_term_seq, target_session, trust_cumulative, trust_emphasis_window,
+--         trust_coverage, trust_homework_analogous.  Returns (topic_id, x7).
 WITH g AS (
     SELECT gl.kind, gl.from_session, gl.to_session
     FROM {{guidelines}} AS gl
     WHERE gl.course = $course
       AND gl.applies_to_exam_type = $exam_type
-      AND gl.kind IN ('cumulative', 'emphasis_window', 'coverage')
+      AND gl.kind IN ('cumulative', 'emphasis_window', 'coverage', 'homework_analogous')
       AND @VISIBLE(gl.source_term_seq, gl.source_session)
 ),
 taught AS (
@@ -40,12 +43,21 @@ span AS (
     FROM {{topics}} AS tp
     LEFT JOIN taught AS ta ON ta.topic_id = tp.topic_id
     WHERE tp.course = $course
+      AND tp.topic_id <> 'T00'
+),
+hw AS (
+    SELECT DISTINCT h.topic_id
+    FROM {{homework_items}} AS h
+    WHERE h.course = $course
+      AND @VISIBLE(h.term_seq, h.session)
 ),
 covered AS (
     SELECT s.topic_id, g.kind
     FROM span AS s
     JOIN g ON g.kind = 'cumulative'
-           OR (s.s_from IS NOT NULL AND s.s_to IS NOT NULL
+           OR (g.kind = 'homework_analogous' AND s.topic_id IN (SELECT hw.topic_id FROM hw))
+           OR (g.kind IN ('emphasis_window', 'coverage')
+               AND s.s_from IS NOT NULL AND s.s_to IS NOT NULL
                AND s.s_from <= COALESCE(g.to_session, 1000000)
                AND s.s_to >= COALESCE(g.from_session, 1))
 )
@@ -53,6 +65,7 @@ SELECT c.topic_id,
        max(CASE c.kind WHEN 'cumulative' THEN $trust_cumulative
                        WHEN 'emphasis_window' THEN $trust_emphasis_window
                        WHEN 'coverage' THEN $trust_coverage
+                       WHEN 'homework_analogous' THEN $trust_homework_analogous
            END) AS x7
 FROM covered AS c
 GROUP BY c.topic_id

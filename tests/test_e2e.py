@@ -7,11 +7,13 @@ the prediction hash is written" (contracts/README.md "Ground truth") is checked 
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
 import sys
 
+import jsonschema
 import pandas as pd
 import pytest
 
@@ -24,14 +26,19 @@ from oracle.lessons_store import COLD_START_WEIGHTS, SIGNALS, get_lessons_store
 
 COURSE = "FX.101"
 FIXTURE_LIST = config.DATA_DIR / "run_lists" / "fixture.csv"
-TEMPLATE_LIST = config.DATA_DIR / "run_lists" / "REAL_TEMPLATE.csv"
+CHAIN_LIST = config.DATA_DIR / "run_lists" / "real_chain.csv"
+SIDE_LIST = config.DATA_DIR / "run_lists" / "history_side_track.csv"
 QUIZ21, FINAL21, QUIZ22, FINAL22 = (f"{COURSE}-quiz1-2021F", f"{COURSE}-final-2021F", f"{COURSE}-quiz1-2022F",
                                     f"{COURSE}-final-2022F")
-RUN_IDS = [f"r1-{QUIZ21}", f"r2-{FINAL21}", f"r3-{QUIZ22}", f"r4-{QUIZ22}", f"r5-{FINAL22}"]
+FINAL20 = f"{COURSE}-final-2020F"
+RUN_IDS =[f"r1-{QUIZ21}", f"r2-{FINAL21}", f"r3-{QUIZ22}", f"r4-{QUIZ22}", f"r5-{FINAL22}"]
 TWIN = f"r4-{QUIZ22}"
 REVEAL_KEY = f"answer_key_{FINAL22}.csv"
 METRICS = ("model_pts", "even_pts", "lastexam_pts", "recall_k", "brier")
 MADE_AT = "2026-09-11T13:00:00-07:00"
+# the contract files themselves, read here so the checks do not go through the code under test
+CONTRACT_VALIDATOR = jsonschema.Draft202012Validator(json.loads(config.PREDICTION_SCHEMA_PATH.read_text(encoding="utf-8")))
+FIXTURE_PREDICTION = json.loads((config.FIXTURES_DIR / "prediction.json").read_text(encoding="utf-8"))
 
 # ------------------------------------------------------------------ the sealed-key spy
 _SPY: dict = {"active": False, "busy": False, "run": None, "events": []}
@@ -129,7 +136,11 @@ def test_fixture_run_list_end_to_end(lab, monkeypatch, capsys):
     labels = be.query(ledger, "SELECT * FROM {{run_labels}}")
     for table, frame in (("predictions", preds), ("runs", runs), ("run_labels", labels)):
         assert list(frame.columns) == [c.name for c in columns(table)], table
-    assert len(preds) == len(labels) == 5 * 8 and set(labels["key_source"]) == {"human"}
+    predictable = sorted(t for t in be.query(ledger, "SELECT topic_id FROM {{topics}}")["topic_id"] if t != "T00")
+    assert len(preds) == 5 * len(predictable) and set(labels["key_source"]) == {"human"}   # D6: T00 never predicted
+    for run_id in RUN_IDS:                                            # a label for every predicted topic of every run
+        assert sorted(preds.loc[preds.run_id == run_id, "topic_id"]) == predictable
+        assert set(labels.loc[labels.run_id == run_id, "topic_id"]) >= set(predictable)
     assert runs["run_id"].tolist() == RUN_IDS                      # the fixture's FAKEHASH rows were replaced
 
     # every prediction validates and its seal re-verifies; ledger rows carry the same hash
@@ -137,7 +148,15 @@ def test_fixture_run_list_end_to_end(lab, monkeypatch, capsys):
     for run_id in RUN_IDS:
         obj, digest = rs.read_sealed(run_id)
         rs.validate_prediction(obj)
-        assert rs.verify_hash(rs.prediction_paths(run_id)[0])
+        pred_file, hash_file = rs.prediction_paths(run_id)
+        assert rs.verify_hash(pred_file)
+        # ...and without the code under test: the contract's schema file, the fixture shape C builds against, and
+        # the contract's canonical form recomputed from the file on disk, the way the reveal recomputes it
+        on_disk = json.loads(pred_file.read_text(encoding="utf-8"))
+        CONTRACT_VALIDATOR.validate(on_disk)
+        assert set(on_disk) == set(FIXTURE_PREDICTION), run_id
+        canonical = json.dumps(on_disk, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        assert hashlib.sha256(canonical).hexdigest() == hash_file.read_text(encoding="utf-8").split()[0] == digest
         assert by_run.loc[run_id, "hash"] == digest and set(preds.loc[preds.run_id == run_id, "hash"]) == {digest}
         assert (by_run.loc[run_id, "made_at"], int(by_run.loc[run_id, "k"])) == (obj["made_at"], obj["k"])
     assert runs["feature_set"].tolist() == ["exam_history", "exam_history", "full", "full", "full"]
@@ -158,7 +177,23 @@ def test_fixture_run_list_end_to_end(lab, monkeypatch, capsys):
     mirror = be.query(ledger, "SELECT run_seq, count(*) AS n FROM {{lessons}} GROUP BY run_seq ORDER BY run_seq")
     assert mirror["run_seq"].tolist() == [1, 2, 3, 5] and set(mirror["n"]) == {len(SIGNALS)}
     assert history[0]["weights"] == COLD_START_WEIGHTS              # one scored run is not enough to refit
-    assert history[-1]["weights"] != history[0]["weights"] and history[-1]["weights"] != history[1]["weights"]
+    assert out["runs"][0]["warnings"]["refit_lessons"].startswith("weights kept")
+    # every version either kept the previous weights (refit_lessons said why) or moved beta, and at least one refit
+    # moved it; WHICH runs train is the refit rule's business (decision D4: feature_set = full, cold_start = false)
+    by_seq, previous, moved = {r["run_seq"]: r for r in out["runs"]}, COLD_START_WEIGHTS, 0
+    for version in history:
+        if "weights kept" in by_seq[version["run_seq"]]["warnings"].get("refit_lessons", ""):
+            assert version["weights"] == pytest.approx(previous, abs=1e-12), version
+        else:
+            assert version["weights"] != pytest.approx(previous, abs=1e-9), version
+            moved += 1
+        previous = version["weights"]
+    assert moved >= 1, history
+    versions ={h["run_seq"]: h["weights"] for h in history}
+    for run_id in RUN_IDS:                    # each prediction was made with exactly the lessons version it names
+        obj = rs.read_sealed(run_id)[0]
+        used = obj["lessons_run_seq"]
+        assert obj["weights"] == pytest.approx(COLD_START_WEIGHTS if used is None else versions[used], abs=1e-6)
     twin_steps = {s["step"]: s for s in out["runs"][3]["steps"]}
     assert twin_steps["refit_lessons"]["skipped"] == twin_steps["store_lessons"]["skipped"] == backtest.TWIN_SKIPPED
     assert out["runs"][3]["lessons_written"] is None and out["runs"][4]["lessons_written"] == 5
@@ -205,6 +240,9 @@ def test_chain_equals_the_step_by_step_commands(tmp_path, monkeypatch, capsys):
     assert code == config.EXIT_HARD and "leakage_ok" in out["error"]
     code, out = cli(backtest.main, [*base, "--signals", "{}"], capsys)           # step inputs without --step
     assert code == config.EXIT_HARD and out["error"].startswith("usage")
+    for extra in (["--step", "score", "--seal-only"], ["--seal-only", "--frozen"]):   # modes that exclude each other
+        code, out = cli(backtest.main, [*base, *extra], capsys)
+        assert code == config.EXIT_HARD and out["error"].startswith("usage"), extra
 
 
 # ================================================================== failures stop the chain with evidence
@@ -279,7 +317,7 @@ def test_run_list_refuses_out_of_order_and_inconsistent_lists(lab, tmp_path, cap
         assert code == config.EXIT_HARD and not out["ok"], (name, out)
         assert any(message in p for p in out["problems"]), (name, out["problems"])
     for bad in ("run_seq,course,target_exam\n1,FX.101,x\n", header + "one,FX.101,x,false,\n",
-                header + f"10,{COURSE},{FINAL22},maybe,\n"):
+                header + f"10,{COURSE},{FINAL22},maybe,\n", header + f"10,{COURSE},{FINAL22},false,history\n"):
         code, out = cli(run_list.main, ["--list", str(_write(tmp_path / "bad.csv", bad))], capsys)
         assert code == config.EXIT_HARD and "RunListError" in out["error"], out
     assert be.query(ledger, "SELECT count(*) AS n FROM {{predictions}}")["n"][0] == 0   # nothing ran
@@ -287,34 +325,124 @@ def test_run_list_refuses_out_of_order_and_inconsistent_lists(lab, tmp_path, cap
     assert code == 0 and [p["run_id"] for p in out["plan"]] == RUN_IDS
 
 
-def test_real_template_is_a_forward_list():
-    """The template's rows are in order and annotated per the ordering rule, with exam times from the 6.641 scout
-    data (data/courses/6.641) and, for 6.003 (no scout data yet), the scout's synthetic in-term ordinals."""
-    text = TEMPLATE_LIST.read_text(encoding="utf-8")
-    assert "REVISE IT once the OCW scout confirms" in text
-    rows = run_list.read_run_list(TEMPLATE_LIST)
-    scout = pd.read_csv(config.DATA_DIR / "courses" / "6.641" / "exams.csv")
-    published = {"6.641": json.loads((config.DATA_DIR / "courses" / "6.641" / "course.json").read_text())
-                 ["published_term_seq"], "6.003": 20113}
-    ordinal = {"quiz1": 1000, "quiz2": 2000, "quiz3": 3000, "final": 9000}   # course.json assumption S-SYNTH
-    exams = {}
-    for r in rows:
-        if r.course == "6.641":
-            hit = scout[scout.exam_id == r.target_exam].iloc[0]          # every 6.641 target is in the scout's list
-            exams[r.target_exam] = run_list.ExamTime(r.course, int(hit.term_seq), int(hit.session), published[r.course])
-        else:
-            _, exam_type, term = r.target_exam.rsplit("-", 2)
-            exams[r.target_exam] = run_list.ExamTime(r.course, config_term_seq(term), ordinal[exam_type],
-                                                     published[r.course])
+def _check_real_list(rows) -> None:
+    """A real list validates against the course-structure data every row names (data/courses/<course>/exams.csv
+    for (term_seq, session), course.json for the published term), is annotated per the ordering rule, and ends
+    with the sealed reveal, followed at most by the reveal's cold-start twin."""
+    exams, roles = {}, {}
+    for course in sorted({r.course for r in rows}):
+        folder = config.DATA_DIR / "courses" / course
+        published = int(json.loads((folder / "course.json").read_text(encoding="utf-8"))["published_term_seq"])
+        for e in pd.read_csv(folder / "exams.csv").itertuples(index=False):
+            session = None if pd.isna(e.session) else int(e.session)
+            exams[e.exam_id] = run_list.ExamTime(course, int(e.term_seq), session, published)
+            roles[e.exam_id] = e.role
+    assert [r.target_exam for r in rows if r.target_exam not in exams] == []
+    assert [r.target_exam for r in rows if roles[r.target_exam] == "excluded"] == []
     assert run_list.validate(rows, exams) == []
     assert all(r.feature_set is not None for r in rows)
-    assert [r.run_seq for r in rows] == [1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14]
-    assert rows[-1].target_exam == "6.003-final-2011F" and rows[4].cold_start and rows[4].target_exam == rows[3].target_exam
+    reveal = [r for r in rows if r.kind == "main"][-1]
+    assert reveal.target_exam == "6.003-final-2011F" and roles[reveal.target_exam] == "sealed_reveal"
+    assert reveal.feature_set == "full"
+    assert all(r.kind == "twin" and r.target_exam == reveal.target_exam for r in rows if r.run_seq > reveal.run_seq)
 
 
-def config_term_seq(term: str) -> int:
-    from oracle.ordering import term_to_seq
-    return term_to_seq(term)
+def test_real_lists_are_forward_lists():
+    """D8: real_chain.csv alone, and real_chain.csv + history_side_track.csv merged by run_seq (the side track is a
+    set of ordinary exam_history runs interleaved in time: no exemption), both validate against data/courses/*."""
+    chain, side = run_list.read_run_list(CHAIN_LIST), run_list.read_run_list(SIDE_LIST)
+    _check_real_list(chain)
+    merged = sorted([*chain, *side], key=lambda r: r.run_seq)
+    _check_real_list(merged)
+    assert [r.target_exam for r in chain if r.kind == "twin"] == ["6.003-quiz1-2011F", "6.003-final-2011F"]
+    assert {r.feature_set for r in chain} == {"full"} and {r.feature_set for r in side} == {"exam_history"}
+    assert not any(r.cold_start for r in side)            # the side track is evidence-shaped, never a twin
+    # moving a side-track run after a later-term run of another course breaks the cross-course term order
+    late = run_list.Row(999, 95, "6.641", "6.641-final-2008S", False, "exam_history")
+    bad = sorted([*chain, late], key=lambda r: r.run_seq)
+    exams = {}
+    for course in ("6.641", "18.06", "6.003"):
+        folder = config.DATA_DIR / "courses" / course
+        published = int(json.loads((folder / "course.json").read_text(encoding="utf-8"))["published_term_seq"])
+        for e in pd.read_csv(folder / "exams.csv").itertuples(index=False):
+            exams[e.exam_id] = run_list.ExamTime(course, int(e.term_seq), None if pd.isna(e.session) else int(e.session),
+                                                 published)
+    problems = run_list.validate(bad, exams)
+    assert problems and all("6.641-final-2008S" in p for p in problems), problems
+
+
+# ================================================================== the reveal (D8): seal both, then score frozen
+def test_reveal_seals_main_and_twin_before_either_is_scored(lab, tmp_path, monkeypatch, capsys):
+    """--seal-only seals the reveal's main run and its cold-start twin with no answer key opened; on stage the same
+    rows replay with --frozen: the same seals, then scored, and no lessons version (beta frozen)."""
+    be, ledger = lab
+    real_score_run = sc.score_run
+
+    def tracked_score_run(run_id, **kwargs):
+        _SPY["run"] = run_id
+        try:
+            return real_score_run(run_id, **kwargs)
+        finally:
+            _SPY["run"] = None
+
+    monkeypatch.setattr(sc, "score_run", tracked_score_run)
+    main, twin = f"r11-{FINAL22}", f"r12-{FINAL22}"
+    reveal = _write(tmp_path / "reveal.csv", "run_seq,course,target_exam,cold_start,feature_set\n"
+                                             f"11,{COURSE},{FINAL22},false,full\n"
+                                             f"12,{COURSE},{FINAL22},true,full\n")
+    _SPY.update(active=True, run=None, events=[])
+    try:
+        code, before = cli(run_list.main, ["--list", str(reveal), "--through-seq", "10"], capsys)  # up to the reveal
+        assert code == config.EXIT_OK and all(r.get("skipped") for r in before["runs"]) and _SPY["events"] == []
+
+        code, sealed = cli(run_list.main, ["--list", str(reveal), "--from-seq", "11", "--seal-only"], capsys)
+        assert code == config.EXIT_OK and sealed["ok"] and _SPY["events"] == [], (sealed, _SPY["events"])
+        seals = {}
+        for run_id in (main, twin):
+            pred_file, hash_file = rs.prediction_paths(run_id)
+            assert rs.verify_hash(pred_file) and not sc.score_path(run_id).exists(), run_id
+            seals[run_id] = hash_file.read_text(encoding="utf-8").split()[0]
+        assert [s["step"] for s in sealed["runs"][0]["steps"]] == [*backtest.SEAL_STEPS, "drop_run_db"]
+        assert sealed["runs"][1]["cold_start"] is True
+        assert sealed["runs"][0]["standardization"] == rs.STANDARDIZATION                 # D5 tag in the summary
+        assert be.query(ledger, "SELECT count(*) AS n FROM {{runs}} WHERE run_seq >= 11")["n"][0] == 0
+
+        code, scored = cli(run_list.main, ["--list", str(reveal), "--from-seq", "11", "--frozen"], capsys)
+    finally:
+        _SPY["active"] = False
+    assert code == config.EXIT_OK and scored["ok"], scored
+    assert [r["hash"] for r in scored["runs"]] == [seals[main], seals[twin]]         # the replays kept the seals
+    assert {e["run"] for e in _SPY["events"]} == {main, twin}
+    assert all(e["hash_existed"] for e in _SPY["events"]), _SPY["events"]
+    runs = be.query(ledger, "SELECT * FROM {{runs}} WHERE run_seq >= 10 ORDER BY run_seq")
+    assert runs["run_id"].tolist() == [main, twin] and set(runs["key_source"]) == {"human"}
+    assert runs["cold_start"].astype(bool).tolist() == [False, True]
+    skipped = {r["run_id"]: {s["step"]: s.get("skipped") for s in r["steps"]} for r in scored["runs"]}
+    assert skipped[main]["refit_lessons"] == skipped[main]["store_lessons"] == backtest.FROZEN_SKIPPED
+    assert skipped[twin]["refit_lessons"] == skipped[twin]["store_lessons"] == backtest.TWIN_SKIPPED
+    assert get_lessons_store().history() == []                       # beta frozen: no lessons version was written
+
+
+def test_run_list_keeps_terms_forward_across_courses():
+    """Lessons transfer across courses, so a run may not target an earlier term than an earlier run of another
+    course. Sessions are per course, so two courses' runs in one term are not ordered; a twin stays exempt."""
+    t = run_list.ExamTime
+    exams = {"A.1-final-2009S": t("A.1", 20091, 26, 20091), "B.2-quiz1-2010S": t("B.2", 20101, 12, 20101),
+             "B.2-final-2010S": t("B.2", 20101, 40, 20101), "C.3-quiz1-2010S": t("C.3", 20101, 1000, 20113),
+             "C.3-quiz1-2011F": t("C.3", 20113, 9, 20113)}
+
+    def row(seq: int, exam: str, twin: bool = False) -> run_list.Row:
+        return run_list.Row(seq + 1, seq, exam.split("-", 1)[0], exam, twin)
+
+    forward = [row(1, "A.1-final-2009S"), row(2, "B.2-quiz1-2010S"), row(3, "B.2-final-2010S"),
+               row(4, "C.3-quiz1-2010S"),                    # same term as B.2's final (sessions are not compared)
+               row(5, "C.3-quiz1-2011F"), row(6, "C.3-quiz1-2011F", True), row(7, "A.1-final-2009S", True)]
+    assert run_list.validate(forward, exams) == []
+    problems = run_list.validate([row(1, "B.2-final-2010S"), row(2, "A.1-final-2009S")], exams)
+    assert len(problems) == 1 and "across courses" in problems[0] and "B.2-final-2010S" in problems[0], problems
+    ledger = [run_list.LedgerRun("r1-B.2-final-2010S", 1, "B.2", "B.2-final-2010S", False)]
+    problems = run_list.validate([row(2, "A.1-final-2009S")], exams, ledger)      # the ledger's runs count too
+    assert len(problems) == 1 and "ledger run r1-B.2-final-2010S" in problems[0], problems
 
 
 # ================================================================== as modules

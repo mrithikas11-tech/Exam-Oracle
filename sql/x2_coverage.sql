@@ -1,5 +1,5 @@
--- x2  Coverage.  Spec: kit/02-product/prediction-model.md, signal row x2. Full feature set only
--- (exam_history targets cannot see the published term's lectures: contracts/README.md).
+-- x2  Coverage.  Spec: kit/02-product/prediction-model.md, signal row x2. Computed for every target (D3:
+-- visibility decides); an exam_history target sees no lecture of its own term, so it gets no rows (x2 = 0).
 --
 --   x2(t) = #(t's visible lectures in T's term with session in [win_from, win_to])
 --           / #(t's visible lectures in T's term)

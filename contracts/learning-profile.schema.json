@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exam-oracle.local/contracts/learning-profile.schema.json",
+  "title": "Exam Oracle learning profile (a proposal extracted from a student's self-description)",
+  "description": "Produced by B's oracle/students.py extract_learning_profile (rules_v1 offline, llm_v1 when LLM_API_KEY is set) and by C's RocketRide pipeline with the same prompt (contracts/student.md section 7). It is a PROPOSAL shown as confirm chips: nothing in it is applied until the student confirms. Every non-null value carries evidence, a verbatim quote of at most 120 characters from the cleaned self-description; a value without a quote is not allowed. schema_version, extractor and source_text_sha256 are filled by code, never by the LLM: the LLM output schema is this schema without those three properties.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "extractor", "source_text_sha256", "style_order", "length", "modality", "pace", "goals", "accommodations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "extractor": { "enum": ["rules_v1", "llm_v1"] },
+    "source_text_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 (hex) of the cleaned text, UTF-8: the exact text stored in HydraDB memory s<n>_self" },
+    "style_order": {
+      "type": "object", "additionalProperties": false, "required": ["value", "confidence", "evidence"],
+      "properties": {
+        "value": { "enum": ["examples_first", "proofs_first", null] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": { "type": ["string", "null"], "maxLength": 120 }
+      }
+    },
+    "length": {
+      "type": "object", "additionalProperties": false, "required": ["value", "confidence", "evidence"],
+      "properties": {
+        "value": { "enum": ["short", "detailed", null] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": { "type": ["string", "null"], "maxLength": 120 }
+      }
+    },
+    "modality": {
+      "type": "object", "additionalProperties": false, "required": ["value", "confidence", "evidence"],
+      "properties": {
+        "value": { "enum": ["visual", "verbal", null] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": { "type": ["string", "null"], "maxLength": 120 }
+      }
+    },
+    "pace": {
+      "type": "object", "additionalProperties": false, "required": ["value", "confidence", "evidence"],
+      "properties": {
+        "value": { "enum": ["slow", "normal", "fast", null] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": { "type": ["string", "null"], "maxLength": 120 }
+      }
+    },
+    "goals": {
+      "type": "array", "maxItems": 3,
+      "description": "What the student wants to achieve, as short statements. Instruction-like text is dropped.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["value", "evidence"],
+        "properties": {
+          "value": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "evidence": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    "accommodations": {
+      "type": "array", "maxItems": 3,
+      "description": "Neutral teaching adjustments ONLY, chosen from this fixed list; never the condition, diagnosis or disability. sensitive is always true: shown only to the student and stored only in the student's own collection.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["value", "sensitive", "evidence"],
+        "properties": {
+          "value": {
+            "type": "string", "maxLength": 80,
+            "enum": [
+              "Allow extra time and avoid timed drills",
+              "Teach in short chunks with a brief recap after each",
+              "Use short sentences and clear formatting, not dense text",
+              "Do not rely on color alone and label every line in diagrams",
+              "Describe every visual in words",
+              "Use a calm, encouraging tone and build difficulty gradually",
+              "Give written text for any audio or video"
+            ]
+          },
+          "sensitive": { "const": true },
+          "evidence": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    "weekly_hours": {
+      "type": "object", "additionalProperties": false, "required": ["value", "confidence", "evidence"],
+      "description": "Optional; present only when the text states it.",
+      "properties": {
+        "value": { "type": ["number", "null"], "minimum": 0.5, "maximum": 60 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": { "type": ["string", "null"], "maxLength": 120 }
+      }
+    },
+    "exam_date": {
+      "type": "object", "additionalProperties": false, "required": ["value", "confidence", "evidence"],
+      "description": "Optional; present only when the text states an ISO date.",
+      "properties": {
+        "value": { "type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": { "type": ["string", "null"], "maxLength": 120 }
+      }
+    }
+  }
+}

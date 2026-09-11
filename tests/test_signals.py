@@ -7,6 +7,7 @@ session 8 and final at session 20 in 2020F, 2021F, 2022F; the published term 202
 """
 from __future__ import annotations
 
+import csv
 import json
 import subprocess
 import sys
@@ -14,7 +15,7 @@ import sys
 import pytest
 
 from oracle import config, ordering
-from oracle.backend import DbHandle, HotdataBackend, RUN_TABLES, columns, render_params, render_tables
+from oracle.backend import DbHandle, HotdataBackend, LocalDuckDBBackend, RUN_TABLES, columns, render_params, render_tables
 from oracle.leakage_check import check_leakage, main as leakage_main
 from oracle.make_run_db import build_run_db, main as make_main, select_sql
 from oracle.run_context import RunError, expand_visible, load_sql, resolve_run_db, run_seq_of
@@ -119,11 +120,16 @@ def test_signals_full_final_2022F(fixture_ledger):
 def test_signals_exam_history_final_2021F(fixture_ledger):
     be, _ = fixture_ledger
     out = _run(be, FINAL_21, 2)
-    assert (out["feature_set"], out["zeroed"], out["window"]) == ("exam_history", ["x2", "x3", "x4", "x5", "x6"], None)
+    # D3: every signal is computed and visibility decides; nothing is forced to 0
+    assert (out["feature_set"], out["computed"], out["zeroed"]) == ("exam_history", list(SIGNAL_SQL), [])
+    assert out["window"] == {"from": 1, "to": 19, "source": "stated"}
     # only prior final is 2020F (w = 1): T02, T04, T05, T06, T07
     assert _col(out, "x1") == _only(dict.fromkeys(["T02", "T04", "T05", "T06", "T07"], 1.0))
-    for signal in ("x2", "x3", "x4", "x5", "x6", "x7"):  # x7: G1/G2 are stated in 2022F, after the target
+    # x2..x5: 2021F has no lecture or pset rows (the published term is 2022F); x7: G1/G2 are stated in 2022F
+    for signal in ("x2", "x3", "x4", "x5", "x7"):
         assert _col(out, signal) == _only({}), signal
+    # x6 sees the target's own term: quiz1-2021F has T02 15 + T03 15 of 30 points
+    assert _col(out, "x6") == _only({"T02": 0.5, "T03": 0.5})
     # last final 2020F: T06 30 pts, T02/T04/T07 20, T05 10; no lecture data -> no even baseline, no padding
     assert out["baselines"] == {"even": [], "last_exam": ["T06", "T02", "T04", "T07", "T05"],
                                 "last_exam_id": f"{C}-final-2020F"}
@@ -151,7 +157,8 @@ def test_signals_quiz_targets_and_since_previous_exam_window(fixture_ledger):
     _upsert(be, ledger, "exams", dict(course=C, exam_id=QUIZ2_22, exam_type="quiz2", term="2022F", term_seq=20223,
                                       session=14, total_points=30, cumulative=False, sealed=False))
     q2 = _run(be, QUIZ2_22, 5)
-    assert q2["window"] == {"from": 9, "to": 13, "source": "since_previous_exam"}  # after quiz 1 (session 8)
+    # the window starts AT quiz 1's session 8 (a lecture at an exam's session came after it); FX.101 has none there
+    assert q2["window"] == {"from": 8, "to": 13, "source": "since_previous_exam"}
     assert _col(q2, "x2") == _only({"T04": 1.0, "T05": 1.0})   # T01-T03 taught before the window
     assert _col(q2, "x4") == _only({"T04": 0.4, "T05": 0.4})   # sessions 9 (no topic), 10-11, 12-13
     assert _col(q2, "x6") == _only({"T01": 0.25, "T02": 0.5, "T03": 0.25})
@@ -182,7 +189,8 @@ def test_x7_trust_learned_only_from_earlier_visible_tests(fixture_ledger):
     # r4 twin targeted T itself. coverage: no tests -> 0.5
     assert out["trust"] == {"cumulative": {"trust": 0.0, "n_tests": 1},
                             "emphasis_window": {"trust": round(2.5 / 3, 6), "n_tests": 3},
-                            "coverage": {"trust": 0.5, "n_tests": 0}}
+                            "coverage": {"trust": 0.5, "n_tests": 0},
+                            "homework_analogous": {"trust": 0.5, "n_tests": 0}}
     # G2 (sessions 13-19) covers T05 (taught at sessions 12-13) .. T08; G1 now carries trust 0
     assert _col(out, "x7") == _only(dict.fromkeys(["T05", "T06", "T07", "T08"], round(2.5 / 3, 6)))
 
@@ -195,7 +203,140 @@ def test_x7_exam_history_uses_topic_lecture_range(fixture_ledger):
     out = _run(be, FINAL_21, 2)
     # no visible lectures -> topic ranges T06 13-15, T07 16-17, T08 18-19 overlap 13..19; T05 (11-12) does not
     assert _col(out, "x7") == _only(dict.fromkeys(["T06", "T07", "T08"], 0.5))
-    assert all(_col(out, s) == _only({}) for s in ("x2", "x3", "x4", "x5", "x6"))
+    assert all(_col(out, s) == _only({}) for s in ("x2", "x3", "x4", "x5"))
+    assert _col(out, "x6") == _only({"T02": 0.5, "T03": 0.5})  # D3: its own term's quiz 1 is visible
+
+
+def test_x7_homework_analogous_covers_topics_with_visible_homework(fixture_ledger):
+    be, ledger = fixture_ledger
+    _upsert(be, ledger, "guidelines", dict(course=C, guideline_id="G4", kind="homework_analogous",
+                                           applies_to_exam_type="quiz1", source_term="2022F", source_term_seq=20223,
+                                           source_session=1, text="Exam problems will be analogous to homework."))
+    out = _run(be, QUIZ1_22, 3)
+    # D7: quiz 1 (session 8) sees ps1 (due 3: T01, T02) and ps2 (due 6: T02, T03); no test yet -> trust 0.5
+    assert out["trust"]["homework_analogous"] == {"trust": 0.5, "n_tests": 0}
+    assert _col(out, "x7") == _only(dict.fromkeys(["T01", "T02", "T03"], 0.5))
+    _upsert(be, ledger, "runs", _test_run("r1-ZZ.200-final-2030F", 1, "ZZ.200", "ZZ.200-final-2030F"))
+    _upsert(be, ledger, "guidelines", dict(course="ZZ.200", guideline_id="H2", kind="homework_analogous",
+                                           applies_to_exam_type="final", source_term="2030F", source_term_seq=20303,
+                                           source_session=1))
+    _upsert(be, ledger, "guideline_tests", dict(guideline_id="H2", run_id="r1-ZZ.200-final-2030F", verdict="match"))
+    out = _run(be, QUIZ1_22, 3)
+    assert out["trust"]["homework_analogous"] == {"trust": 1.0, "n_tests": 1}
+    assert _col(out, "x7") == _only(dict.fromkeys(["T01", "T02", "T03"], 1.0))
+
+
+def test_off_list_topic_T00_is_never_a_signal_row(fixture_ledger):
+    be, ledger = fixture_ledger
+    _upsert(be, ledger, "topics", dict(course=C, topic_id="T00", topic="Off-list"))
+    item = dict(course=C, exam_type="quiz1", term="2022F", term_seq=20223, session=8, problem="3", points=10,
+                topic_id="T00", points_share=10, tag_source="human")
+    _upsert(be, ledger, "exam_items", {**item, "exam_id": QUIZ1_22},
+            {**item, "exam_id": FINAL_21, "exam_type": "final", "term": "2021F", "term_seq": 20213, "session": 20})
+    out = _run(be, FINAL_22, 4)
+    assert [t["topic_id"] for t in out["topics"]] == TOPICS and out["unknown_topics"] == []
+    assert out["off_list_topic"] == "T00"
+    # x1 of the listed topics is unchanged (the prior finals' weights do not depend on their tags)
+    assert _col(out, "x1") == pytest.approx(_only({"T02": 0.7 / 1.7, "T04": 1, "T05": 1, "T06": 1, "T07": 1,
+                                                   "T08": 1 / 1.7}), abs=1e-6)
+    # x6: quiz points on T00 stay in the denominator (30 + 10 = 40), like the scoring denominator (D6)
+    assert _col(out, "x6") == _only({"T01": 7.5 / 40, "T02": 15 / 40, "T03": 7.5 / 40})
+
+
+# ================================================================== the real 6.003 structure (data/courses/6.003)
+C6003 = "6.003"
+F11 = {n: f"6.003-{n}-2011F" for n in ("quiz1", "quiz2", "quiz3", "final")}
+# SYNTHETIC quiz tags (the real papers are not tagged yet); T16 on quiz 3 is deliberately a topic taught after
+# quiz 3, to show that a quiz-tested topic is left out of x5 even when it is recent
+QUIZ_TAGS = {F11["quiz1"]: (9, ["T05", "T08"]), F11["quiz2"]: (14, ["T09", "T10"]),
+             F11["quiz3"]: (20, ["T11", "T13", "T16"])}
+
+
+def _course_csv(name: str) -> list[dict]:
+    with open(config.DATA_DIR / "courses" / C6003 / name, newline="", encoding="utf-8") as fh:
+        return list(csv.DictReader(fh))
+
+
+def _int(value: str | None) -> int | None:
+    return int(value) if value not in (None, "") else None
+
+
+def _flag(value: str | None) -> bool | None:
+    return None if value in (None, "") else value.strip().lower() == "true"
+
+
+def _ledger_6003(tmp_path, *, blank_windows: bool) -> LocalDuckDBBackend:
+    """A tiny local ledger straight from data/courses/6.003 (loader rules: skip is_review rows and role=excluded
+    exams; topics' first/last_lecture from first/last_session), plus the synthetic quiz tags above."""
+    be = LocalDuckDBBackend(tmp_path / ("blank" if blank_windows else "stored"), "ledger")
+    ledger = be.ensure_ledger()
+    course = json.loads((config.DATA_DIR / "courses" / C6003 / "course.json").read_text(encoding="utf-8"))
+    be.load_table(ledger, "courses", [_row("courses", course=C6003, title=course["title"], ocw_url=course["ocw_url"],
+                                           published_term=course["published_term"],
+                                           published_term_seq=course["published_term_seq"])], mode="replace")
+    be.load_table(ledger, "topics", [_row("topics", course=C6003, topic_id=r["topic_id"], topic=r["topic"],
+                                          first_lecture=_int(r["first_session"]), last_lecture=_int(r["last_session"]))
+                                     for r in _course_csv("topics.csv")], mode="replace")
+    be.load_table(ledger, "lectures", [_row("lectures", course=C6003, term=r["term"], term_seq=int(r["term_seq"]),
+                                            session=int(r["session"]), date=r["date"] or None,
+                                            lecture_n=_int(r["lecture_n"]), title=r["title"],
+                                            topic_id=r["topic_id"] or None)
+                                       for r in _course_csv("sessions.csv") if not _flag(r["is_review"])],
+                  mode="replace")
+    exams = []
+    for r in _course_csv("exams.csv"):
+        if r["role"] == "excluded":
+            continue
+        blank = blank_windows and r["term"] == "2011F"
+        exams.append(_row("exams", course=C6003, exam_id=r["exam_id"], exam_type=r["exam_type"], term=r["term"],
+                          term_seq=int(r["term_seq"]), session=_int(r["session"]), date=r["date"] or None,
+                          total_points=float(r["total_points"]) if r["total_points"] else None,
+                          coverage_from_session=None if blank else _int(r["coverage_from_session"]),
+                          coverage_to_session=None if blank else _int(r["coverage_to_session"]),
+                          cumulative=_flag(r["cumulative"]), sealed=bool(_flag(r["sealed"]))))
+    be.load_table(ledger, "exams", exams, mode="replace")
+    be.load_table(ledger, "exam_items", [
+        _row("exam_items", course=C6003, exam_id=exam, exam_type=exam.split("-")[1], term="2011F", term_seq=20113,
+             session=session, problem=str(n), points=10.0, topic_id=topic, points_share=10.0, tag_source="human")
+        for exam, (session, topics) in QUIZ_TAGS.items() for n, topic in enumerate(topics, 1)], mode="replace")
+    return be
+
+
+def test_6003_final_x5_includes_T15_taught_right_after_quiz_3(tmp_path):
+    be = _ledger_6003(tmp_path, blank_windows=False)
+    run_id = f"r10-{F11['final']}"
+    build_run_db(be, C6003, F11["final"], run_id)
+    out = compute_signals(be, C6003, F11["final"], run_id)
+    assert check_leakage(be, C6003, F11["final"], run_id)["leakage_ok"]
+    topics = [t["topic_id"] for t in out["topics"]]
+    assert "T00" not in topics and len(topics) == 18                    # D6 on the real topic list
+    assert out["window"] == {"from": 1, "to": 25, "source": "cumulative"}
+    x5 = {t["topic_id"]: t["signals"]["x5"] for t in out["topics"]}
+    # quiz 3 = session 20 and L20 (T15, 2011-11-17) came the day after it: lectures at sessions >= 20 are
+    # T15 (20), T16 (21-22), T17 (23-24), T18 (25); T16 was tagged on quiz 3, so x5 = {T15, T17, T18}
+    assert {t for t, v in x5.items() if v} == {"T15", "T17", "T18"}
+    assert x5["T15"] == 1.0 and x5["T16"] == 0.0 and x5["T14"] == 0.0  # T14 = L19, before quiz 3
+
+
+def test_6003_quiz_windows_start_at_the_previous_quiz(tmp_path):
+    expected = {"quiz1": (1, 8), "quiz2": (9, 13), "quiz3": (14, 19)}
+    for blank, source in ((True, "since_previous_exam"), (False, None)):
+        be = _ledger_6003(tmp_path, blank_windows=blank)
+        for seq, (name, (lo, hi)) in enumerate(expected.items(), 1):
+            run_id = f"r{seq}-{F11[name]}"
+            build_run_db(be, C6003, F11[name], run_id)
+            out = compute_signals(be, C6003, F11[name], run_id)
+            # the CSV stores no quiz window (W-QUIZ: nothing states one), so stored and blanked agree: the SQL
+            # derives every window from the previous exam's session
+            want = source or "since_previous_exam"
+            assert out["window"] == {"from": lo, "to": hi, "source": want}, (blank, name)
+            if blank and name == "quiz2":  # L9 (T09) was taught after quiz 1 and stays in quiz 2's window
+                assert _col(out, "x2")["T09"] == 1.0 and _col(out, "x2")["T10"] == 1.0
+                assert _col(out, "x4")["T09"] == pytest.approx(2 / 5) and _col(out, "x4")["T10"] == pytest.approx(3 / 5)
+            if blank and name == "quiz3":  # L14 (T11) likewise: sessions 14-19 hold T11 x2, T12, T13 x2, T14
+                assert _col(out, "x4") == pytest.approx({**{t["topic_id"]: 0.0 for t in out["topics"]},
+                                                         "T11": 2 / 6, "T12": 1 / 6, "T13": 2 / 6, "T14": 1 / 6},
+                                                        abs=1e-6)  # signals carry 6 decimals
 
 
 # ================================================================== leakage
@@ -270,7 +411,7 @@ def test_every_sql_file_renders_for_hotdata():
     params = {"course": C, "target_exam": FINAL_22, "exam_type": "final", "target_term_seq": 20223,
               "target_session": 20, "tau": 0.02, "win_from": 1, "win_to": 19, "stated_from": None, "stated_to": 19,
               "cumulative": True, "trust_cumulative": 0.5, "trust_emphasis_window": 0.5, "trust_coverage": 0.5,
-              "run_seq": 4}
+              "trust_homework_analogous": 0.5, "run_seq": 4}
     names = [*SIGNAL_SQL.values(), "coverage_window", "baseline_even", "baseline_last_exam", "leakage",
              "guideline_trust"]
     queries = [load_sql(n) for n in names] + [select_sql(t) for t in RUN_TABLES]

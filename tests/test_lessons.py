@@ -19,7 +19,7 @@ import pytest
 from openai.resources.chat.completions import Completions
 from sklearn.linear_model import LogisticRegression
 
-from oracle import config, read_lessons, refit_lessons, store_lessons
+from oracle import config, rank_and_seal, read_lessons, refit_lessons, store_lessons
 from oracle.backend import LocalDuckDBBackend, get_backend
 from oracle.lessons_store import (COLD_START_WEIGHTS, FEATURES, SIGNALS, LocalJSONLessonsStore, cold_start_record,
                                   make_record, to_ledger_rows)
@@ -113,7 +113,9 @@ def test_refit_moves_a_predictive_weight_up(loop, seed):
     assert out["evidence"]["n_runs"] == 8 and out["evidence"]["n_rows"] == 160
     assert out["evidence"]["rows_by_feature_set"] == {"full": 160}
     assert out["supporting_runs"] == [r["run_id"] for r in runs]
-    assert w["x3"] > COLD_START_WEIGHTS["x3"] + 1.5              # the truly predictive signal moved up
+    # the truly predictive signal moved up; D5 fits on per-run z-scores, where the true effect is 5.0 * sd(U(0,1))
+    # = 5 / sqrt(12) = 1.44 (fitted: 1.43, 1.52, 1.19 for seeds 1, 4, 7)
+    assert w["x3"] > COLD_START_WEIGHTS["x3"] + 0.5
     assert w["x3"] == max(w[f] for f in FEATURES)
     assert max(abs(w[f]) for f in ("x1", "x4", "x5")) < w["x3"] / 4   # pure-noise signals stay small
     assert out["kept_previous"] == ["x2", "x6", "x7"]            # never varied: no evidence either way
@@ -145,16 +147,35 @@ def test_logistic_model_is_the_spec_model():
 def test_a_constant_signal_keeps_its_previous_weight_and_the_training_log_odds():
     rng = np.random.default_rng(11)
     rows = pd.concat([_frame(_run(seq, rng)) for seq in (1, 2, 3)], ignore_index=True)
-    rows["x2"] = 1.0                                             # e.g. cumulative finals: every topic in the window
+    # x2 is constant WITHIN each run (1.0 in run 1, 0.4 in runs 2-3), e.g. cumulative finals: every topic in the
+    # window. After the per-run z-scores (D5) it is 0 everywhere, so it carries no evidence and keeps its weight.
+    rows["x2"] = np.where(rows["run_id"] == rows["run_id"].iloc[0], 1.0, 0.4)
     previous = {**cold_start_record(), "weights": {**COLD_START_WEIGHTS, "x2": 0.7}}
     result = refit_lessons.refit(rows, previous)
     assert result["refit"] and result["kept_previous"] == ["x2", "x6", "x7"] and result["weights"]["x2"] == 0.7
     varying = [f for f in FEATURES if f not in result["kept_previous"]]
-    reduced = refit_lessons.logistic_model().fit(rows[varying].to_numpy(), rows["y"].to_numpy())
+    Z = refit_lessons.standardize_rows(rows)
+    cols = [FEATURES.index(f) for f in varying]
+    reduced = refit_lessons.logistic_model().fit(Z[:, cols], rows["y"].to_numpy())
     beta = np.array([result["weights"][f] for f in FEATURES])
-    z_ours = result["weights"]["intercept"] + rows[list(FEATURES)].to_numpy() @ beta
-    z_reduced = reduced.intercept_[0] + rows[varying].to_numpy() @ reduced.coef_[0]
+    z_ours = result["weights"]["intercept"] + Z @ beta
+    z_reduced = reduced.intercept_[0] + Z[:, cols] @ reduced.coef_[0]
     assert np.allclose(z_ours, z_reduced)                        # the same fit; x2's prior weight is not erased
+
+
+def test_standardisation_is_per_run_and_identical_to_rank_and_seal():
+    rows = pd.DataFrame({"run_id": ["a", "a", "a", "b", "b"], "course": "C", "y": [0, 1, 0, 1, 0],
+                         **{f: [0.0] * 5 for f in FEATURES}})
+    rows["x1"] = [0.0, 1.0, 2.0, 5.0, 5.0]
+    rows["x2"] = [1.0, 1.0, 1.0, 0.0, 1.0]
+    Z = refit_lessons.standardize_rows(rows)
+    # run a: x1 mean 1, population std sqrt(2/3) -> -1.224745, 0, 1.224745; x2 constant -> 0
+    # run b: x1 constant -> 0; x2 = 0, 1: mean 0.5, std 0.5 -> -1, 1.  Never mixed across runs.
+    assert Z[:, 0] == pytest.approx([-1.224745, 0.0, 1.224745, 0.0, 0.0], abs=1e-6)
+    assert Z[:, 1] == pytest.approx([0.0, 0.0, 0.0, -1.0, 1.0]) and not Z[:, 2:].any()
+    run_a = {f"T0{i + 1}": {f: float(rows.loc[i, f]) for f in FEATURES} for i in range(3)}
+    z = rank_and_seal.zscores(run_a)                             # what the prediction was made with
+    assert [[z[t][f] for f in FEATURES] for t in sorted(z)] == Z[:3].tolist()
 
 
 def test_guards_keep_the_previous_weights_and_say_why(tmp_path, fixture_ledger):
@@ -203,12 +224,32 @@ def test_cold_start_twins_and_machine_keys_are_not_evidence(tmp_path):
     reference, out = _refit(clean, 6), _refit(mixed, 6)
     assert out["weights"] == pytest.approx(reference["weights"])
     assert out["supporting_runs"] == [r["run_id"] for r in base]
-    assert out["left_out"] == {"cold_start_runs": [twin["run_id"]], "machine_label_runs": [machine["run_id"]]}
+    assert out["left_out"] == {"cold_start_runs": [twin["run_id"]], "exam_history_runs": [],
+                               "machine_label_runs": [machine["run_id"]]}
     assert "run_seq 6 contributed no training rows" in out["warning"]
     opted = _refit(mixed, 6, allow_machine_labels=True)
     assert opted["supporting_runs"] == [r["run_id"] for r in base] + [machine["run_id"]]
     assert opted["left_out"]["cold_start_runs"] == [twin["run_id"]]
     assert opted["weights"]["x3"] < out["weights"]["x3"]
+
+
+def test_exam_history_runs_are_not_training_evidence(tmp_path):
+    """D4: beta is refit only on feature_set = 'full' AND cold_start = false."""
+    rng = np.random.default_rng(13)
+    base = [_run(seq, rng) for seq in (1, 2, 3)]
+    history = _run(4, rng, beta={"intercept": 2.0, "x3": -6.0}, feature_set="exam_history")  # would drag x3 down
+    clean, mixed = _loop(tmp_path, "clean"), _loop(tmp_path, "mixed")
+    _seed(clean.be, clean.ledger, base)
+    _seed(mixed.be, mixed.ledger, base + [history])
+    reference, out = _refit(clean, 4), _refit(mixed, 4)
+    assert out["weights"] == pytest.approx(reference["weights"]) and out["refit"]
+    assert out["left_out"]["exam_history_runs"] == [history["run_id"]]
+    assert out["evidence"]["rows_by_feature_set"] == {"full": 45}       # 3 runs x 15 topics
+    only = _loop(tmp_path, "only")
+    _seed(only.be, only.ledger, [history, _run(5, rng, feature_set="exam_history")])
+    kept = _refit(only, 5)
+    assert not kept["refit"] and kept["reason"] == "no scored runs to learn from yet" and "(D4)" in kept["warning"]
+    assert kept["weights"] == COLD_START_WEIGHTS
 
 
 # ------------------------------------------------------------------ store + read

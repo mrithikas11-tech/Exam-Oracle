@@ -8,9 +8,18 @@ kit/03-architecture/rote-plays.md (refit_lessons.py: all runs -> new beta + stat
 
 Training rows: predictions (x1..x7) JOIN run_labels (y) JOIN runs, for runs with run_seq <= N, leaving out
   * cold-start twins (runs.cold_start): a comparison run, not new evidence;
+  * exam_history runs (D4: beta is refit only on feature_set = 'full' AND cold_start = false). Their x2..x5 are
+    0 because the published term lies in their future, not because the topic is absent, so pooling them would
+    teach the model that coverage and lecture time do not matter;
   * machine-keyed labels (run_labels.key_source != 'human') unless --allow-machine-labels, because "the AI
-    never grades itself" (contracts/README.md).
+    never grades itself" (contracts/README.md);
+  * any T00 row (the off-list bucket is never predicted, D6).
 A NULL signal counts as 0, as in lessons_store.predict_p. On hotdata the join is LIVE [TEST].
+
+Standardisation (D5): before the fit, each x1..x7 is z-scored WITHIN each run across that run's topic rows
+(rank_and_seal.standardize_matrix: population std, zero variance -> 0), exactly as rank_and_seal does before it
+applies the weights, so the weights learned here are the weights predictions use. The predictions table keeps
+the raw signals; the transform is recomputed here.
 
 Model: LogisticRegression(C=0.5, L2 penalty, solver='lbfgs', fit_intercept=True). scikit-learn 1.8
 deprecated `penalty` (removed in 1.10; 1.9.1 is installed) and documents l1_ratio=0 as the same L2 penalty,
@@ -20,11 +29,11 @@ fit is identical to penalty='l2'.
 Guards: the previous weights are kept, and the reason is given, when there are no training rows, fewer than
 MIN_RUNS runs, only one class of y, or no signal that varies.
 
-Constant signals: a signal with the same value c on every training row carries no evidence about its own
-weight. It cannot be told apart from the intercept, and for c = 0 (x2..x6 on exam_history runs) it does not
-enter the likelihood at all, so the L2 penalty alone would pull its weight to 0. Such a signal keeps its
-previous weight, and the intercept is shifted by -c * previous weight, so every training row's fitted
-log-odds stay the same. For c = 0 the shift is 0.
+Constant signals: a (standardised) signal with the same value c on every training row carries no evidence about
+its own weight. It cannot be told apart from the intercept, and for c = 0 (after z-scoring, any signal that is
+constant within every run) it does not enter the likelihood at all, so the L2 penalty alone would pull its weight
+to 0. Such a signal keeps its previous weight, and the intercept is shifted by -c * previous weight, so every
+training row's fitted log-odds stay the same. For c = 0 the shift is 0.
 
 Previous weights come from read_lessons.resolve_lessons(before_run_seq=N): the latest version strictly
 before N. Refitting run N again (a Rote resume or replay) therefore gives the same answer and never uses
@@ -37,9 +46,8 @@ scales compare fairly. An optional LLM rewording (LIVE [TEST]) runs only when LL
 is not given. The LLM sees only the template sentences, no exam content, and it never predicts. A rewording
 is kept only if every number in it also appears in its template sentence; otherwise the template stays.
 
-Known limitation: exam_history rows carry x2..x6 = 0 because those signals are unavailable there, not because
-they are absent. Pooling those rows with `full` rows can pull x2..x6 toward 0, so the output reports
-evidence.rows_by_feature_set to make that visible.
+evidence.rows_by_feature_set reports the training rows per feature set (only 'full' since D4); left_out lists
+the runs dropped, by reason.
 
 Prints ONE JSON object, which store_lessons takes as its input. Exit codes: 0 ok (if the weights were kept,
 a "warning" is included); 1 hard fault (ledger unreadable or inconsistent, bad arguments).
@@ -60,6 +68,7 @@ from oracle import config
 from oracle.backend import Backend, DbRef, get_backend
 from oracle.lessons_store import (FEATURES, SIGNAL_LABELS, SIGNALS, LessonsStore, make_record, predict_p,
                                   validate_weights)
+from oracle.rank_and_seal import OFF_LIST_TOPIC, standardize_matrix
 from oracle.read_lessons import ScriptArgumentParser, non_negative_int, parse_cli, resolve_lessons
 
 C_REGULARISATION = 0.5    # prediction-model.md: "keep regularization strong (C ~ 0.5)"
@@ -76,6 +85,7 @@ FROM {{predictions}} AS p
 JOIN {{run_labels}} AS l ON l.run_id = p.run_id AND l.topic_id = p.topic_id
 JOIN (SELECT DISTINCT run_id, run_seq, course, cold_start FROM {{runs}}) AS r ON r.run_id = p.run_id
 WHERE r.run_seq <= $through_run_seq
+  AND p.topic_id <> $off_list
 ORDER BY r.run_seq, p.run_id, p.topic_id
 """
 
@@ -97,7 +107,7 @@ def load_training_rows(backend: Backend, ledger: DbRef, through_run_seq: int, *,
                        allow_machine_labels: bool = False) -> tuple[pd.DataFrame, dict[str, list[str]]]:
     """Training rows for the runs with run_seq <= N (module docstring), and the run_ids left out, by reason.
     Exact duplicate rows (a repeated append) are dropped; conflicting ones raise ValueError."""
-    frame = backend.query(ledger, TRAINING_SQL, {"through_run_seq": int(through_run_seq)})
+    frame = backend.query(ledger, TRAINING_SQL, {"through_run_seq": int(through_run_seq), "off_list": OFF_LIST_TOPIC})
     if frame.attrs.get("hotdata_warning"):  # LIVE [TEST] a truncated result would silently bias the fit
         raise RuntimeError(f"training rows may be incomplete: {frame.attrs['hotdata_warning']}")
     frame = frame.drop_duplicates()
@@ -107,12 +117,26 @@ def load_training_rows(backend: Backend, ledger: DbRef, through_run_seq: int, *,
     if not frame["y"].isin([0, 1]).all():
         raise ValueError("run_labels.y must be 0 or 1")
     cold = frame["cold_start"].astype(bool)
+    full = frame["feature_set"] == "full"
     machine = frame["key_source"] != "human"
     left_out = {"cold_start_runs": _run_ids(frame[cold]),
-                "machine_label_runs": [] if allow_machine_labels else _run_ids(frame[~cold & machine])}
-    rows = frame[~cold if allow_machine_labels else ~cold & ~machine].reset_index(drop=True)
+                "exam_history_runs": _run_ids(frame[~cold & ~full]),
+                "machine_label_runs": [] if allow_machine_labels else _run_ids(frame[~cold & full & machine])}
+    keep = ~cold & full if allow_machine_labels else ~cold & full & ~machine
+    rows = frame[keep].reset_index(drop=True)
     rows[list(FEATURES)] = rows[list(FEATURES)].fillna(0.0).astype(float)
     return rows, left_out
+
+
+def standardize_rows(rows: pd.DataFrame) -> np.ndarray:
+    """The x1..x7 matrix of `rows` with every signal z-scored within each run_id (D5), rows in their given
+    order: rank_and_seal.standardize_matrix applied per run, the transform the predictions were made with."""
+    X = rows[list(FEATURES)].to_numpy(dtype=float)
+    Z = np.zeros_like(X)
+    if len(rows):
+        for positions in rows.groupby("run_id", sort=False).indices.values():
+            Z[positions] = standardize_matrix(X[positions])
+    return Z
 
 
 # ------------------------------------------------------------------ the fit
@@ -144,11 +168,12 @@ def _guard(n_rows: int, n_runs: int, y: np.ndarray, varying: list[str]) -> str |
 
 
 def refit(rows: pd.DataFrame, previous: Mapping[str, Any]) -> dict[str, Any]:
-    """Fit new weights on `rows` (columns run_id, course, x1..x7, y), starting from the `previous` lessons
-    record. Pure, no I/O. Returns the weights, whether a refit happened (and if not, why), the signals that
-    kept their previous weight, per-signal effect sizes, the evidence counts and lbfgs's iteration count."""
+    """Fit new weights on `rows` (columns run_id, course, x1..x7 RAW, y), starting from the `previous` lessons
+    record. The signals are z-scored per run first (standardize_rows, D5). Pure, no I/O. Returns the weights,
+    whether a refit happened (and if not, why), the signals that kept their previous weight, per-signal effect
+    sizes, the evidence counts and lbfgs's iteration count."""
     prev = validate_weights(previous["weights"])
-    X = rows[list(FEATURES)].to_numpy(dtype=float)
+    X = standardize_rows(rows)
     y = rows["y"].to_numpy(dtype=int)
     spread = X.max(axis=0) - X.min(axis=0) if len(rows) else np.zeros(len(FEATURES))
     varying = [f for f, s in zip(FEATURES, spread) if s > CONSTANT_SPREAD]
@@ -182,12 +207,13 @@ def template_statements(result: Mapping[str, Any], previous_weights: Mapping[str
     base_p = predict_p(w, {})
     if not result["refit"]:
         why = result["reason"]
-        out = {"intercept": f"Base rate kept: a topic with no signal gets p = {base_p:.2f} "
+        out = {"intercept": f"Base rate kept: a topic at the run average on every signal gets p = {base_p:.2f} "
                             f"(intercept {_num(w['intercept'])}): {why}."}
         out.update({f: f"{SIGNAL_LABELS[f]} ({f}) kept at {_num(w[f])}: {why}." for f in FEATURES})
         return out
     evidence = f"from {_count(result['n_runs'], 'run')} in {_count(result['n_courses'], 'course')}"
-    out = {"intercept": f"Base rate: a topic with no signal gets p = {base_p:.2f} (intercept {_num(w['intercept'])}, "
+    out = {"intercept": f"Base rate: a topic at the run average on every signal gets p = {base_p:.2f} "
+                        f"(intercept {_num(w['intercept'])}, "
                         f"was {_num(prev['intercept'])}); {result['n_positive']} of {result['n_rows']} topic rows "
                         f"{evidence} were on their exam."}
     effects = result["effects"]
@@ -304,9 +330,13 @@ def run_refit(through_run_seq: int, *, backend: Backend | None = None, ledger: D
     record = make_record(through_run_seq, result["weights"], statements, result["supporting_runs"])
 
     warnings = [] if result["refit"] else [f"weights kept: {result['reason']}"]
+    if not len(rows) and left_out["exam_history_runs"]:
+        warnings.append(f"{_count(len(left_out['exam_history_runs']), 'exam_history run')} left out: beta is refit "
+                        f"only on feature_set=full runs (D4)")
     if len(rows) and through_run_seq not in set(rows["run_seq"].astype(int).tolist()):
-        warnings.append(f"run_seq {through_run_seq} contributed no training rows (unscored, a cold-start twin or "
-                        f"machine-keyed); lessons version {through_run_seq} is built from earlier runs only")
+        warnings.append(f"run_seq {through_run_seq} contributed no training rows (unscored, a cold-start twin, an "
+                        f"exam_history run or machine-keyed); lessons version {through_run_seq} is built from "
+                        f"earlier runs only")
     if result["n_iter"] >= MAX_ITER:
         warnings.append(f"lbfgs stopped after {MAX_ITER} iterations without converging")
     if llm["warning"]:

@@ -7,7 +7,9 @@ Spec: contracts/README.md "The time-ordering rule" (overrides the date-based wor
 Dates are informational only. A NULL/unknown session means "end of term" (ledger-schema.sql, exams.session),
 so such a row is visible only from a later term, and an end-of-term target sees every numbered session of
 its own term. feature_set is 'full' only when T is in the course's published term, otherwise
-'exam_history' (x2..x6 = 0: the published term's lectures and psets lie in T's future).
+'exam_history'. Decision D3: no signal is forced to zero for exam_history; every signal is computed from the rows
+T can see, which for an earlier-term target never include the published term's lectures or psets (they lie in
+T's future). "Before exam E" is session < E.session; "after exam E" is session >= E.session.
 """
 from __future__ import annotations
 
@@ -17,7 +19,6 @@ from typing import Literal
 SEASONS: dict[str, int] = {"S": 1, "U": 2, "F": 3}
 _SEASON_LETTER = {number: letter for letter, number in SEASONS.items()}
 END_OF_TERM = 1_000_000  # session used for NULL / unknown sessions; sorts after every real session
-EXAM_HISTORY_ZERO_SIGNALS = ("x2", "x3", "x4", "x5", "x6")
 FeatureSet = Literal["full", "exam_history"]
 
 _TERM_RE = re.compile(r"(\d{4})([SUF])")

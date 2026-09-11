@@ -11,24 +11,30 @@ CLI:  python -m oracle.rank_and_seal --run-id r7-FX.101-final-2022F --course FX.
 an earlier step's output). --lessons is `python -m oracle.read_lessons --before-run-seq <seq>` output (Play 2 step
 read_lessons -> rank_and_seal); without it the lessons store's latest version is read.
 Prints ONE JSON object {ok, run_id, hash, made_at, k, top_k, ...}. Exit 0 ok | 1 hard fault (bad input, missing
-ledger rows, refusing to re-seal) | 4 leakage (x2..x6 != 0 on an exam_history run, or lessons from this run or later).
+ledger rows, refusing to re-seal) | 4 leakage (lessons fitted on this run or a later one).
 
 Signals input (--signals <path>, or '-' for stdin), produced by run_signals:
     {"signals": [{"topic_id": "T01", "x1": 0.5, ..., "x7": 0.0}, ...],      # or "topics"/"rows", or a bare list
      "course": ..., "target_exam": ..., "feature_set": ...}                   # optional; checked when present
 A row may nest its values ({"topic_id": "T01", "signals": {"x1": ...}}), and "signals" may be a mapping
-{topic_id: {"x1": ...}}. Every topic of the course's fixed list must be present, and no other; a missing or null
-x_k counts as 0. On exam_history runs x2..x6 MUST be 0 (contracts/README.md), otherwise exit 4.
+{topic_id: {"x1": ...}}. Every PREDICTABLE topic of the course's fixed list must be present, and no other; a row for
+the off-list bucket T00 is dropped (D6: T00 is never ranked or predicted). A missing or null x_k counts as 0. Signals
+are taken as run_signals computed them: visibility decides what an exam_history target sees, and x2..x6 are no
+longer forced to 0 there (D3; e.g. x6 of an earlier-term final sees its own term's quiz).
 
 Design decisions:
-  * p = sigma(b0 + sum bk*xk) (lessons_store.predict_p) with lessons_store.read_latest() weights, or
-    COLD_START_WEIGHTS with --cold-start. Signals and p are rounded to 6 decimals BEFORE ranking, so the sealed object
-    is self-consistent (p recomputes from its own weights and signals) and rank follows the stored p; ties go to the
+  * p = sigma(b0 + sum bk*zk) (lessons_store.predict_p), where zk is x_k z-scored across this run's predictable topics
+    (D5, standardize_matrix: population std; a signal with zero variance gives 0). refit_lessons trains on the very
+    same transform. The object records standardization = zscore_per_run_v1 and keeps the RAW x_k in `signals`.
+    Weights: lessons_store.read_latest(), or COLD_START_WEIGHTS with --cold-start. Signals are rounded to 6 decimals
+    BEFORE the z-scores and p is rounded to 6 decimals, so the sealed object is self-consistent (prediction_p()
+    recomputes every p from the object's own weights and raw signals) and rank follows the stored p; ties go to the
     smaller topic_id. Lessons must come from an EARLIER run: lessons_run_seq >= this run's seq means the weights were
     fitted on this target's own label (a replayed older run) -> exit 4.
   * K = median number of distinct topics over VISIBLE exams of the same type in this course; if there are none, the
     same median over all courses; then over all visible exams of any type; then 1. The median rounds half up and K
-    is clamped to [1, number of topics]. The tier used is reported as k_source.
+    is clamped to [1, number of topics]. The tier used is reported as k_source. T00 tags are not counted (D6), and
+    baseline B never copies T00.
   * Baselines: even = top-K by x4 (ties topic_id) when feature_set = full, [] when exam_history (score.py then uses
     the closed form K/N). last_exam = topics of the most recent visible same-type exam of this course ranked by
     their points there (ties topic_id), cut to K, padded to K by x4 then topic_id.
@@ -58,6 +64,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
 
+import numpy as np
 import pandas as pd
 from jsonschema import Draft202012Validator
 
@@ -66,6 +73,9 @@ from oracle.backend import Backend, DbRef, get_backend
 from oracle.lessons_store import FEATURES, LessonsStore, cold_start_weights, get_lessons_store, predict_p, validate_weights
 
 SCHEMA_VERSION = 1
+OFF_LIST_TOPIC = "T00"            # D6: the off-list bucket; never ranked/predicted, its key points stay in the denominator
+STANDARDIZATION = "zscore_per_run_v1"  # D5: prediction.schema.json `standardization`
+ZSCORE_MIN_STD = 1e-9             # a population std at or below this is zero variance (inputs carry 6 decimals)
 ROUND_DIGITS = 6
 PREDICTION_SUFFIX = ".prediction.json"
 HASH_SUFFIX = ".sha256"
@@ -199,6 +209,37 @@ def parse_signals(data: Any) -> tuple[dict[str, dict[str, float]], dict[str, Any
     return out, meta
 
 
+# ------------------------------------------------------------------ D5 standardisation
+def standardize_matrix(X: Any) -> np.ndarray:
+    """Z-score every column across the rows (one run's predictable topics): (x - mean) / population std; a column
+    whose std is <= ZSCORE_MIN_STD (zero variance) becomes 0. The ONE transform rank_and_seal predicts with and
+    refit_lessons trains on (D5)."""
+    X = np.asarray(X, dtype=float)
+    Z = np.zeros_like(X)
+    if X.size == 0:
+        return Z
+    mean, std = X.mean(axis=0), X.std(axis=0)
+    ok = std > ZSCORE_MIN_STD
+    Z[:, ok] = (X[:, ok] - mean[ok]) / std[ok]
+    return Z
+
+
+def zscores(signals: Mapping[str, Mapping[str, float]]) -> dict[str, dict[str, float]]:
+    """{topic_id: {x_k: z_k}} over the given topics (rows in topic_id order, as refit_lessons reads them)."""
+    ids = sorted(signals)
+    X = np.array([[float(signals[t].get(x, 0.0)) for x in FEATURES] for t in ids], dtype=float)
+    Z = standardize_matrix(X.reshape(len(ids), len(FEATURES)))
+    return {t: {x: float(Z[i, j]) for j, x in enumerate(FEATURES)} for i, t in enumerate(ids)}
+
+
+def prediction_p(obj: Mapping[str, Any]) -> dict[str, float]:
+    """Every topic's p recomputed from the object's own weights and RAW signals, honouring `standardization`
+    (absent = raw signals). What a reviewer runs to check a sealed prediction is self-consistent."""
+    signals = {t["topic_id"]: t["signals"] for t in obj["topics"]}
+    inputs = zscores(signals) if obj.get("standardization") == STANDARDIZATION else signals
+    return {tid: round6(predict_p(obj["weights"], inputs[tid])) for tid in signals}
+
+
 # ------------------------------------------------------------------ K and baselines
 def choose_k(exam_counts: pd.DataFrame, course: str, exam_type: str, n_topics: int) -> tuple[int, str]:
     """K from one row per visible exam (columns course, exam_type, n_topics); see the module docstring."""
@@ -251,15 +292,17 @@ def build_prediction(*, run_id: str, course: str, target_exam: str, feature_set:
                      weights: Mapping[str, float], lessons_run_seq: int | None, cold_start: bool, k: int,
                      topic_names: Mapping[str, str], signals: Mapping[str, Mapping[str, float]],
                      even: Sequence[str], last_exam: Sequence[str]) -> dict[str, Any]:
-    """The object of contracts/prediction.schema.json, every topic ranked by (p desc, topic_id); validated."""
+    """The object of contracts/prediction.schema.json, every topic ranked by (p desc, topic_id); validated.
+    p uses the D5 z-scores across `topic_names`; the object keeps the raw signals."""
     w = validate_weights(weights)
-    scored = sorted(((tid, round6(predict_p(w, signals[tid]))) for tid in topic_names), key=lambda tp: (-tp[1], tp[0]))
+    z = zscores({tid: signals[tid] for tid in topic_names})
+    scored = sorted(((tid, round6(predict_p(w, z[tid]))) for tid in topic_names), key=lambda tp: (-tp[1], tp[0]))
     topics = [{"topic_id": tid, "topic": topic_names[tid], "p": p, "rank": rank, "in_top_k": rank <= k,
                "signals": {x: signals[tid][x] for x in FEATURES}} for rank, (tid, p) in enumerate(scored, 1)]
     obj = {"schema_version": SCHEMA_VERSION, "run_id": run_id, "course": course, "target_exam": target_exam,
            "feature_set": feature_set, "cold_start": bool(cold_start), "made_at": made_at,
-           "lessons_run_seq": lessons_run_seq, "k": k, "weights": w, "topics": topics,
-           "baselines": {"even": list(even), "last_exam": list(last_exam)}}
+           "lessons_run_seq": lessons_run_seq, "k": k, "standardization": STANDARDIZATION, "weights": w,
+           "topics": topics, "baselines": {"even": list(even), "last_exam": list(last_exam)}}
     validate_prediction(obj)
     return obj
 
@@ -273,19 +316,20 @@ def prediction_rows(obj: Mapping[str, Any], digest: str) -> list[dict[str, Any]]
 
 # ------------------------------------------------------------------ ledger context
 _COURSE_SQL = "SELECT published_term_seq FROM {{courses}} WHERE course = $course"
-_TOPICS_SQL = "SELECT topic_id, topic FROM {{topics}} WHERE course = $course ORDER BY topic_id"
+_TOPICS_SQL = "SELECT topic_id, topic FROM {{topics}} WHERE course = $course AND topic_id <> $off_list ORDER BY topic_id"
 _EXAM_SQL = 'SELECT course, exam_type, term_seq, "session" FROM {{exams}} WHERE exam_id = $exam_id'
 _ITEMS_SQL = ('SELECT course, exam_id, exam_type, term_seq, "session", topic_id, sum(points_share) AS pts '
-              "FROM {{exam_items}} WHERE exam_id <> $exam_id AND " + ordering.visible_sql()
+              "FROM {{exam_items}} WHERE exam_id <> $exam_id AND topic_id <> $off_list AND " + ordering.visible_sql()
               + ' GROUP BY course, exam_id, exam_type, term_seq, "session", topic_id')
 
 
 def load_context(backend: Backend, ledger: DbRef, course: str, target_exam: str) -> dict[str, Any]:
-    """Course, fixed topic list, target exam and the visible (exam, topic, points) rows, all from the ledger."""
+    """Course, PREDICTABLE topic list (no T00, D6), target exam and the visible (exam, topic, points) rows without
+    T00 tags (so K and baseline B ignore the off-list bucket), all from the ledger."""
     courses = backend.query(ledger, _COURSE_SQL, {"course": course})
     if len(courses) != 1:
         raise ValueError(f"course {course!r} is not in the ledger's courses table")
-    topics = backend.query(ledger, _TOPICS_SQL, {"course": course})
+    topics = backend.query(ledger, _TOPICS_SQL, {"course": course, "off_list": OFF_LIST_TOPIC})
     if topics.empty:
         raise ValueError(f"course {course!r} has no topics in the ledger")
     exam = backend.query(ledger, _EXAM_SQL, {"exam_id": target_exam})
@@ -294,7 +338,8 @@ def load_context(backend: Backend, ledger: DbRef, course: str, target_exam: str)
     row = exam.iloc[0]
     term_seq = int(row["term_seq"])
     session = None if pd.isna(row["session"]) else int(row["session"])
-    items = backend.query(ledger, _ITEMS_SQL, {"exam_id": target_exam, **ordering.visibility_params(term_seq, session)})
+    items = backend.query(ledger, _ITEMS_SQL, {"exam_id": target_exam, "off_list": OFF_LIST_TOPIC,
+                                               **ordering.visibility_params(term_seq, session)})
     return {"exam_type": str(row["exam_type"]), "term_seq": term_seq, "session": session,
             "published_term_seq": int(courses.iloc[0]["published_term_seq"]),
             "topics": {str(r.topic_id): str(r.topic) for r in topics.itertuples(index=False)}, "items": items}
@@ -421,14 +466,10 @@ def rank_and_seal(run_id: str, course: str, target_exam: str, signals_data: Any,
     for key, want in (("course", course), ("target_exam", target_exam), ("feature_set", fset)):
         if key in meta and meta[key] != want:
             raise ValueError(f"signals were computed for {key}={meta[key]!r}, expected {want!r}")
+    signals.pop(OFF_LIST_TOPIC, None)  # D6: the off-list bucket is never ranked
     missing, extra = sorted(set(ctx["topics"]) - set(signals)), sorted(set(signals) - set(ctx["topics"]))
     if missing or extra:
         raise ValueError(f"signals must cover exactly the course's topic list (missing={missing}, unknown={extra})")
-    if fset == "exam_history":
-        leaked = sorted(f"{t}.{x}" for t, s in signals.items() for x in ordering.EXAM_HISTORY_ZERO_SIGNALS if s[x])
-        if leaked:
-            raise LeakageError(f"exam_history target {target_exam}: x2..x6 must be 0 (published-term material is in "
-                               f"its future), got non-zero {leaked[:6]}")
 
     if cold_start:
         weights, lessons_seq = cold_start_weights(), None
@@ -457,7 +498,7 @@ def rank_and_seal(run_id: str, course: str, target_exam: str, signals_data: Any,
     return {"ok": True, "run_id": run_id, "hash": digest, "made_at": made_at, "k": k,
             "top_k": [t["topic_id"] for t in obj["topics"] if t["in_top_k"]], "k_source": k_source,
             "feature_set": fset, "cold_start": bool(cold_start), "lessons_run_seq": lessons_seq,
-            "baselines": obj["baselines"], "last_exam_copied": last_exam_id, "prediction_path": str(path),
+            "standardization": obj["standardization"], "baselines": obj["baselines"], "last_exam_copied": last_exam_id, "prediction_path": str(path),
             "already_sealed": already}
 
 

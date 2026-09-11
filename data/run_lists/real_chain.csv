@@ -1,0 +1,26 @@
+# Real run list: the FULL lesson chain of decision D8 (kit/07-reference/decisions-log.md, contracts/course-structure.md
+# "Run lists"). Supersedes REAL_TEMPLATE.csv. exam_ids are exactly as in data/courses/<course>/exams.csv.
+# Order: 6.641 2009 Midterm (M1) -> 6.641 2009 Final -> 18.06 S10 Exams 1-3 + Final -> 6.003 F11 Q1 (+ cold-start
+# twin) -> Q2 -> Q3 -> 6.003 F11 Final SEALED (+ cold-start twin). Every row is feature_set = full (D3: target in its
+# course's published term). D4: only these non-twin rows refit the lessons.
+# run_seq has gaps on purpose: history_side_track.csv uses 1-3 and 21-23, so the side track sits at its place in time
+# (read_lessons --before-run-seq N) and both lists validate together against the ledger's runs table.
+# DEFERRED (D8): the frozen-beta_G arm of the 6.003 targets is not in this list (no arm column yet).
+# THE REVEAL (rows 100-101): both predictions are sealed before either is scored (D8). `run_list --through-seq 90`
+# runs everything before it; hours before the demo `run_list --from-seq 100 --seal-only` seals rows 100 and 101 and
+# opens no answer key; on stage `run_list --from-seq 100 --frozen` replays both (same hashes), scores them and writes
+# no lessons version. Keep answer_key_6.003-final-2011F.csv out of SEALED_DIR until both .sha256 files exist
+# (B_README.md section 6). Never refit after the reveal.
+run_seq,course,target_exam,feature_set,cold_start,notes
+10,6.641,6.641-quiz1-2009S,full,false,M1: first run of the lesson chain (Midterm = quiz1 slot by position A1; session 12; x7 from G01 + G03 homework_analogous at trust 0.5)
+20,6.641,6.641-final-2009S,full,false,6.641 Final 2009 (session 26) <- Finals 2008/2006/2000/1998 + the 2009 Midterm; pre-registered sensitivity arm S-NOPACKET
+30,18.06,18.06-quiz1-2010S,full,false,18.06 Exam 1 (session 12) <- 8 earlier quiz1 papers (web.mit.edu archive: needs the source exception decision)
+40,18.06,18.06-quiz2-2010S,full,false,18.06 Exam 2 (session 25)
+50,18.06,18.06-quiz3-2010S,full,false,18.06 Exam 3 (session 37)
+60,18.06,18.06-final-2010S,full,false,18.06 Final (session 40)
+70,6.003,6.003-quiz1-2011F,full,false,6.003 Quiz 1 (session 9): first FULL 6.003 run with the cross-course lessons
+71,6.003,6.003-quiz1-2011F,full,true,cold-start twin of run 70 (blank weights; same key; no refit and no lessons version)
+80,6.003,6.003-quiz2-2011F,full,false,6.003 Quiz 2 (session 14)
+90,6.003,6.003-quiz3-2011F,full,false,6.003 Quiz 3 (session 20); x1 = Fall 2009 Quiz 3 only (Spring 2010 Quiz 3 omitted by OCW: T5-CURATION)
+100,6.003,6.003-final-2011F,full,false,THE REVEAL (sealed; session 26): seal only - see the header; lessons version = run 90
+101,6.003,6.003-final-2011F,full,true,THE REVEAL cold-start twin: seal before run 100 is scored (header)

@@ -1,0 +1,17 @@
+# History-only side track of decision D8: earlier-term targets, feature_set = exam_history (D3: x2..x6 come only from
+# rows the target can see, which here means none of the published term's lectures or homework). It NEVER refits (D4:
+# refit only on feature_set = full AND cold_start = false). Plot it separately, labelled "history-only".
+# run_seq interleaves with real_chain.csv (10, 20, 30-60, 70-101) so each run reads only lessons made from earlier
+# terms (read_lessons --before-run-seq N): 1-3 come before 6.641 M1 (cold start), 21-23 after the 6.641 2009 Final and
+# before 18.06 and 6.003 F11. Both lists validate together (run_list forward-in-time checks, no exemption needed).
+# D4 is in refit_lessons (2026-09-11): these runs are left out of training, so the lessons version each one writes
+# carries the weights the earlier full runs give (1-3: the cold-start weights; 21-23: those of version 20).
+# cold_start is false on purpose: these are evidence-shaped runs, not twins, and runs.feature_set = exam_history is
+# how the dashboard tells them apart.
+run_seq,course,target_exam,feature_set,cold_start,notes
+1,6.641,6.641-final-2006S,exam_history,false,x1 <- 2000/1998 packet finals (partial papers: A-PACKET); x6 <- 2006 Quiz 1 + Quiz 2
+2,6.641,6.641-quiz1-2008S,exam_history,false,x1 <- 2006 Quiz 1
+3,6.641,6.641-final-2008S,exam_history,false,x1 <- Finals 2006/2000/1998; x6 <- 2008 Quiz 1 (the kit's former M1)
+21,6.003,6.003-quiz1-2010S,exam_history,false,x1 <- Fall 2009 Quiz 1
+22,6.003,6.003-quiz2-2010S,exam_history,false,x1 <- Fall 2009 Quiz 2; x6 <- Spring 2010 Quiz 1
+23,6.003,6.003-final-2010S,exam_history,false,x1 <- Fall 2009 Final; x6 <- Spring 2010 Quiz 1 + Quiz 2 (Quiz 3 omitted by OCW: T5-CURATION)

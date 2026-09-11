@@ -144,7 +144,8 @@ def main():
     for rank, (tid, name, *_ ) in enumerate(TOPICS, 1):
         fake_topics.append({"topic_id": tid, "topic": name, "p": round(0.9 - 0.08 * rank, 4), "rank": rank,
                             "in_top_k": rank <= 4, "signals": {f"x{i}": 0.0 for i in range(1, 8)}})
-    pred = {"schema_version": 1, "run_id": f"r0-{C}-final-2022F", "course": C, "target_exam": f"{C}-final-2022F",
+    pred = {"schema_version": 1, "standardization": "zscore_per_run_v1",  # D5
+            "run_id": f"r0-{C}-final-2022F", "course": C, "target_exam": f"{C}-final-2022F",
             "feature_set": "full", "cold_start": True, "made_at": "2026-09-11T09:00:00-07:00", "lessons_run_seq": None,
             "k": 4, "weights": weights, "topics": fake_topics,
             "baselines": {"even": ["T06", "T02", "T04", "T05"], "last_exam": ["T06", "T07", "T08", "T04"]}}

@@ -114,7 +114,7 @@ def test_feature_set():
     assert ordering.feature_set(20213, 20223) == "exam_history"
     assert ordering.feature_set("2022F", 20223) == "full"
     assert ordering.feature_set(20233, "2022F") == "exam_history"  # later than the published term, per contract
-    assert ordering.EXAM_HISTORY_ZERO_SIGNALS == ("x2", "x3", "x4", "x5", "x6")
+    assert not hasattr(ordering, "EXAM_HISTORY_ZERO_SIGNALS")      # D3: nothing is forced to zero
 
 
 # ================================================================== config

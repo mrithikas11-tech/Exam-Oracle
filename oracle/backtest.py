@@ -1,5 +1,6 @@
 """python -m oracle.backtest --course C --target-exam E --run-seq N [--cold-start] [--allow-machine-key]
-                            [--allow-machine-labels] [--made-at ISO]   [--step NAME <step inputs>]
+                            [--allow-machine-labels] [--made-at ISO] [--seal-only | --frozen]
+                            [--step NAME <step inputs>]
 
 Play 2 `run-backtest` (kit/03-architecture/rote-plays.md) for run_id r<N>-<E>, as ONE command:
 
@@ -28,6 +29,21 @@ Glue that lives only here:
     with the fixed blank weights as a comparison (prediction-model.md "Cold-start comparison"), is not evidence,
     and must not create a lessons version. (refit also leaves cold-start runs out of its training rows.)
   * cognee_feedback is a no-op offline: the module reports "skipped": "no LLM_API_KEY".
+  * --seal-only stops after rank_and_seal (then drop_run_db): the reveal (D8) seals its main run AND its cold-start
+    twin before either is scored. A later plain run of the same run_id is a replay: read_lessons --before-run-seq N
+    and rank_and_seal's kept made_at give the same hash, and it goes on to score.
+  * --frozen: beta is frozen once the reveal prediction is sealed (kit/05-build/staging-plan.md), so the run is
+    scored and recorded but refit_lessons and store_lessons are skipped.
+
+Where a variant of the run plugs in (one place each, so a new arm, feature set or signal transform needs no new glue):
+  * runs that must not write a lessons version  Backtest.lessons_skip_reason() (today: a cold-start twin, and
+                                                --frozen). An exam_history run (the D8 history side track) does
+                                                write a version, but refit leaves it out of training (D4), so the
+                                                version carries the weights the earlier full runs give;
+  * the lessons a prediction is made with       step_read_lessons, handed to rank_and_seal as --lessons;
+  * what the summary reports from the seal      SEAL_SUMMARY_KEYS (e.g. a standardisation tag the seal adds);
+  * feature_set and any per-run transform       decided by the ordering rule inside make_run_db / run_signals /
+                                                rank_and_seal (and refit_lessons for training), never in this glue.
 
 --step NAME runs ONE step with the same parameters and prints that step's own JSON: what a Rote Play records, one
 command per step. Earlier outputs are passed explicitly, each as inline JSON, a file path, or '-' (stdin, once):
@@ -63,7 +79,12 @@ from oracle.run_context import resolve_run_db
 
 STEPS = ("make_run_db", "run_signals", "leakage_check", "read_lessons", "rank_and_seal", "score", "append_ledger",
          "refit_lessons", "store_lessons", "cognee_feedback", "drop_run_db")
-TWIN_SKIPPED = "cold-start twin: a comparison run is not evidence, so no lessons version is written"
+SEAL_STEPS = STEPS[:STEPS.index("rank_and_seal") + 1]  # --seal-only: these, then drop_run_db
+TWIN_SKIPPED = ("cold-start twin: it predicts with the blank weights and is not evidence, so no lessons version is "
+                "written")
+FROZEN_SKIPPED = "beta is frozen after the reveal prediction (--frozen): no lessons version is written"
+SEAL_SUMMARY_KEYS = ("feature_set", "hash", "made_at", "k", "top_k", "lessons_run_seq",
+                     "standardization")  # rank_and_seal -> summary
 StepResult = tuple[int, dict[str, Any]]
 
 
@@ -77,6 +98,8 @@ class Backtest:
     allow_machine_key: bool = False
     allow_machine_labels: bool = False
     made_at: str | None = None
+    seal_only: bool = False
+    frozen: bool = False
     run_db: DbRef | None = None
     outputs: dict[str, dict[str, Any]] = field(default_factory=dict)
     seconds: float | None = None
@@ -100,6 +123,13 @@ class Backtest:
         if isinstance(self.run_db, DbHandle):
             return ["--run-db", json.dumps(self.run_db.to_dict())]
         return ["--run-db", self.run_db] if self.run_db else []
+
+    def lessons_skip_reason(self) -> str | None:
+        """Why this run writes NO lessons version (refit_lessons and store_lessons are skipped), or None when it
+        does. The one place that decides it: a run variant that must not train adds its reason here."""
+        if self.cold_start:
+            return TWIN_SKIPPED
+        return FROZEN_SKIPPED if self.frozen else None
 
 
 # ------------------------------------------------------------------ running one script in-process
@@ -221,8 +251,9 @@ def add_run_tokens(run_id: str, tokens: int) -> bool:
 
 
 def step_refit_lessons(bt: Backtest) -> StepResult:
-    if bt.cold_start:
-        return config.EXIT_OK, {"ok": True, "skipped": TWIN_SKIPPED, "run_id": bt.run_id}
+    skip = bt.lessons_skip_reason()
+    if skip:
+        return config.EXIT_OK, {"ok": True, "skipped": skip, "run_id": bt.run_id}
     argv = ["--through-run-seq", str(bt.run_seq)] + (["--allow-machine-labels"] if bt.allow_machine_labels else [])
     code, out = invoke(refit_lessons.main, argv)
     tokens = (out.get("llm") or {}).get("tokens") if code == config.EXIT_OK else None
@@ -233,8 +264,9 @@ def step_refit_lessons(bt: Backtest) -> StepResult:
 
 
 def step_store_lessons(bt: Backtest) -> StepResult:
-    if bt.cold_start:
-        return config.EXIT_OK, {"ok": True, "skipped": TWIN_SKIPPED, "run_id": bt.run_id}
+    skip = bt.lessons_skip_reason()
+    if skip:
+        return config.EXIT_OK, {"ok": True, "skipped": skip, "run_id": bt.run_id}
     refit = bt.outputs.get("refit_lessons")
     if refit is None:
         return _missing("store_lessons", "the refit_lessons output (--refit)")
@@ -317,7 +349,7 @@ def run_backtest(bt: Backtest) -> StepResult:
         return code
 
     try:
-        for name in STEPS[:-1]:
+        for name in (SEAL_STEPS if bt.seal_only else STEPS[:-1]):
             if name == "append_ledger":
                 bt.seconds = round(time.monotonic() - started, 3)
             code = run(name)
@@ -332,9 +364,9 @@ def run_backtest(bt: Backtest) -> StepResult:
     stored = bt.outputs.get("store_lessons") or {}
     summary: dict[str, Any] = {
         "ok": failed is None, "run_id": bt.run_id, "run_seq": bt.run_seq, "course": bt.course,
-        "target_exam": bt.target_exam, "cold_start": bt.cold_start, "exit_code": exit_code, "failed_step": failed,
-        "feature_set": seal.get("feature_set"), "hash": seal.get("hash"), "made_at": seal.get("made_at"),
-        "k": seal.get("k"), "top_k": seal.get("top_k"), "lessons_run_seq": seal.get("lessons_run_seq"),
+        "target_exam": bt.target_exam, "cold_start": bt.cold_start, "seal_only": bt.seal_only, "frozen": bt.frozen,
+        "exit_code": exit_code, "failed_step": failed,
+        **{key: seal.get(key) for key in SEAL_SUMMARY_KEYS},
         "key_source": scored.get("key_source"),
         "scores": {m: scored[m] for m in append_ledger.METRICS if m in scored} or None,
         "lessons_written": stored.get("run_seq") if stored.get("ok") and not stored.get("skipped") else None,
@@ -346,7 +378,7 @@ def run_backtest(bt: Backtest) -> StepResult:
     if failed:
         summary["evidence"] = bt.outputs[failed]
     _record_attempt(bt.run_id, {"started_at": started_at, "exit_code": exit_code, "failed_step": failed,
-                                "hash": seal.get("hash")})
+                                "hash": seal.get("hash"), "seal_only": bt.seal_only})
     return exit_code, summary
 
 
@@ -407,6 +439,10 @@ def build_parser() -> config.ScriptParser:
                         help="without a human key, score against the ledger's tags (key_source = machine)")
     parser.add_argument("--allow-machine-labels", action="store_true", help="let refit train on machine-keyed runs")
     parser.add_argument("--made-at", help="ISO-8601 seal timestamp with offset (default now; a replay keeps the sealed one)")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--seal-only", action="store_true",
+                      help="stop after rank_and_seal (the reveal: seal main and twin before scoring either)")
+    mode.add_argument("--frozen", action="store_true", help="beta is frozen: score and record, write no lessons version")
     parser.add_argument("--step", choices=STEPS, help="run only this step and print its own JSON")
     inputs = parser.add_argument_group("step inputs (only with --step): inline JSON, a file path, or '-'")
     inputs.add_argument("--run-db", help="make_run_db output, its run_db handle, or the database name")
@@ -426,10 +462,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.step is None and any(getattr(args, name) is not None for name in STEP_INPUTS):
         parser.error("step inputs (--run-db, --signals, ...) are only used with --step")
+    if args.step is not None and args.seal_only:
+        parser.error("--seal-only selects steps of the chain; with --step, run just the steps you want")
     try:
         bt = Backtest(args.course, args.target_exam, args.run_seq, cold_start=args.cold_start,
                       allow_machine_key=args.allow_machine_key, allow_machine_labels=args.allow_machine_labels,
-                      made_at=args.made_at)
+                      made_at=args.made_at, seal_only=args.seal_only, frozen=args.frozen)
         if args.step:
             load_step_inputs(bt, args)
             code, out = run_step(bt, args.step)

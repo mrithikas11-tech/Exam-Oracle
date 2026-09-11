@@ -141,7 +141,7 @@ class StatedGuideline(DataPoint):
     """A professor's stated guidance as a numeric claim (student-layer.md; the ledger `guidelines` columns)."""
 
     course: str
-    kind: Literal["cumulative", "emphasis_window", "coverage", "format"]
+    kind: Literal["cumulative", "emphasis_window", "coverage", "format", "homework_analogous"]  # D7
     applies_to_exam_type: str | None = None
     from_session: int | None = None
     to_session: int | None = None

@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import io
 import json
+import math
 import os
+import statistics
 import subprocess
 import sys
 
@@ -147,11 +149,22 @@ def test_prediction_object_schema_ranks_k_and_baselines(lab, tmp_path, capsys):
     rs.validate_prediction(json.loads((config.FIXTURES_DIR / "prediction.json").read_text()))
     assert (obj["k"], out["k_source"], obj["feature_set"], obj["lessons_run_seq"]) == (5, "course_same_type", "full", None)
     assert obj["weights"] == COLD_START_WEIGHTS and obj["cold_start"] is False
+    assert obj["standardization"] == out["standardization"] == "zscore_per_run_v1"
     assert [t["rank"] for t in obj["topics"]] == list(range(1, 9))
-    for t in obj["topics"]:                                           # p recomputes from the object's own numbers
-        assert t["p"] == round(predict_p(obj["weights"], t["signals"]), 6)
-        assert t["in_top_k"] == (t["rank"] <= 5)
-    assert out["top_k"] == ["T06", "T04", "T02", "T05", "T07"]
+    # D5, recomputed independently: z = (x - mean) / population std across the 8 topics; x2 (all 1.0) and x3, x5..x7
+    # (all 0) have zero variance -> 0, so p = sigma(-1.2 + 0.5 z1 + 0.5 z4). The object keeps the RAW signals.
+    ids = sorted(X1)
+    z1 = [(X1[t] - statistics.fmean(X1.values())) / statistics.pstdev(X1.values()) for t in ids]
+    x4 = [round(LECTURES[t] / 17, 6) for t in ids]
+    z4 = [(v - statistics.fmean(x4)) / statistics.pstdev(x4) for v in x4]
+    want = {t: 1 / (1 + math.exp(-(-1.2 + 0.5 * a + 0.5 * b))) for t, a, b in zip(ids, z1, z4)}
+    got = {t["topic_id"]: t["p"] for t in obj["topics"]}
+    assert got == pytest.approx(want, abs=2e-6) and rs.prediction_p(obj) == got
+    assert got["T06"] == pytest.approx(0.517633, abs=2e-6)          # sigma(-1.2 + 0.5*1.0815 + 0.5*1.4596)
+    for t in obj["topics"]:
+        assert t["signals"]["x1"] == X1[t["topic_id"]] and t["in_top_k"] == (t["rank"] <= 5)
+    assert predict_p(obj["weights"], obj["topics"][0]["signals"]) != obj["topics"][0]["p"]   # not the raw formula
+    assert out["top_k"] == ["T06", "T02", "T04", "T05", "T07"]      # z1 + z4: 2.54, 2.24, 0.87, 0.28, -0.02
     assert obj["baselines"] == {"even": ["T02", "T06", "T01", "T03", "T04"],      # x4 desc, ties by topic_id
                                 "last_exam": ["T04", "T05", "T06", "T07", "T08"]}  # final-2021F by points
     assert out["last_exam_copied"] == FINAL21
@@ -179,10 +192,12 @@ def test_k_choice_and_fallbacks(lab, tmp_path, capsys):
 
 # ================================================================== leakage guards and inputs
 def test_leakage_guards_exit_4(lab, tmp_path, capsys):
-    bad = history_signals()
-    bad["signals"]["T02"]["x4"] = 0.2                                  # published-term lectures on an earlier target
-    code, out = seal_run(tmp_path, capsys, "r2-" + QUIZ21, QUIZ21, bad)
-    assert code == config.EXIT_LEAKAGE and out["leakage"]
+    earlier = history_signals()
+    earlier["signals"]["T02"]["x6"] = 0.5          # D3: no forced zeros on exam_history; run_signals' visibility decides
+    code, out = seal_run(tmp_path, capsys, "r2-" + FINAL21, FINAL21, earlier)
+    assert code == 0 and out["feature_set"] == "exam_history"
+    sealed = {t["topic_id"]: t["signals"] for t in rs.read_sealed(out["run_id"])[0]["topics"]}
+    assert sealed["T02"]["x6"] == 0.5 and sealed["T01"]["x6"] == 0.0
     weights = {**COLD_START_WEIGHTS, "x1": 1.5}
     get_lessons_store().write(7, weights, {}, ["r6-" + QUIZ21])
     code, out = seal_run(tmp_path, capsys, "r7-" + FINAL22, FINAL22, full_signals())
@@ -192,7 +207,7 @@ def test_leakage_guards_exit_4(lab, tmp_path, capsys):
     assert rs.read_sealed(out["run_id"])[0]["weights"] == weights
     code, out = seal_run(tmp_path, capsys, "r5-" + FINAL22, FINAL22, full_signals(), "--cold-start")
     assert code == 0 and out["cold_start"] and out["lessons_run_seq"] is None      # the blank-weights twin
-    assert not list(rs.predictions_dir().glob("r2-*")) and not list(rs.predictions_dir().glob("r7-*"))
+    assert not list(rs.predictions_dir().glob("r7-*"))                           # the refused run left nothing
 
 
 def test_signal_shapes_and_bad_inputs(lab, tmp_path, capsys, monkeypatch):
@@ -311,6 +326,71 @@ def test_missing_key_exit_6_and_machine_key(lab, tmp_path, capsys, monkeypatch):
     assert code == sc.EXIT_NO_KEY                                             # sealed exam: no exam_items either
     monkeypatch.setenv("SEALED_DIR", str(config.REPO_ROOT / "data"))
     assert cli(sc, ["--run-id", "r7-" + FINAL22], capsys)[0] == config.EXIT_HARD  # SEALED_DIR inside the repo
+
+
+def _sealed_key(tmp_path, monkeypatch, exam: str, text: str) -> None:
+    sealed = tmp_path / "sealed-keys"
+    sealed.mkdir(exist_ok=True)
+    monkeypatch.setenv("SEALED_DIR", str(sealed))
+    (sealed / f"answer_key_{exam}.csv").write_text(text)
+
+
+def test_off_list_topic_T00_is_never_ranked_but_stays_in_the_denominator(lab, tmp_path, capsys, monkeypatch):
+    be, ledger = lab
+    be.load_table(ledger, "topics", [{"course": "FX.101", "topic_id": "T00", "topic": "Off-list",
+                                      "first_lecture": None, "last_lecture": None}], mode="upsert")
+    be.load_table(ledger, "exam_items", [{"course": "FX.101", "exam_id": FINAL21, "exam_type": "final", "term": "2021F",
+                                          "term_seq": 20213, "session": 20, "problem": "5", "points": 10.0,
+                                          "topic_id": "T00", "points_share": 10.0, "tag_source": "human",
+                                          "text_clean": None}], mode="upsert")
+    signals = full_signals()
+    signals["signals"].append({"topic_id": "T00", "x1": 1.0})        # a stray T00 row is dropped, never ranked
+    code, out = seal_run(tmp_path, capsys, "r7-" + FINAL22, FINAL22, signals)
+    assert code == 0, out
+    obj = rs.read_sealed(out["run_id"])[0]
+    assert [t["topic_id"] for t in obj["topics"]] == out["top_k"] + ["T01", "T03", "T08"] and len(obj["topics"]) == 8
+    # K: final-2020F has 5 topics, final-2021F 5 + T00; counting T00 would give median(5, 6) -> 6
+    assert (out["k"], out["k_source"]) == (5, "course_same_type")
+    assert obj["baselines"]["last_exam"] == ["T04", "T05", "T06", "T07", "T08"]   # T00's 10 points never copied
+    # the key splits problem 1 (20 pts) over T06 and T00: shares are of all 100 points, T00's 10 included
+    good = (config.FIXTURE_SEALED_DIR / f"answer_key_{FINAL22}.csv").read_text()
+    _sealed_key(tmp_path, monkeypatch, FINAL22, good.replace(",20,T06,", ",20,T06;T00,"))
+    code, scored = cli(sc, ["--run-id", out["run_id"]], capsys)
+    assert code == 0, scored
+    assert scored["off_list_pts"] == 0.1 and scored["total_points"] == 100.0
+    # top-5 {T06, T02, T04, T05, T07}: 0.1 + 0.2 + 0.1 + 0.1 + 0.2 (0.7 / 0.9 = 0.78 if T00 left the denominator)
+    assert scored["model_pts"] == pytest.approx(0.7) and scored["recall_k"] == pytest.approx(5 / 6)
+    assert scored["even_pts"] == pytest.approx(0.4) and scored["lastexam_pts"] == pytest.approx(0.7)
+    labels = be.query(ledger, "SELECT * FROM {{run_labels}} WHERE run_id = $r", {"r": out["run_id"]})
+    assert len(labels) == 8 and "T00" not in set(labels.topic_id) and labels.key_points.sum() == pytest.approx(0.9)
+    # closed form for exam_history: a random K of the N predicted topics covers K/N of the NON-off-list points
+    s = sc.compute_scores(hand_prediction("exam_history"), [("1", "T01", 10.0), ("2", "T00", 10.0)])
+    assert (s["even_pts"], s["off_list_pts"], s["model_pts"], s["recall_k"]) == (0.2, 0.5, 0.5, 1.0)
+    assert sc.compute_scores(hand_prediction(), [("1", "T00", 5.0)])["recall_k"] is None   # no predicted topic on it
+
+
+def test_homework_analogous_guideline_tests_are_written_at_scoring(lab, tmp_path, capsys, monkeypatch):
+    be, ledger = lab
+    be.load_table(ledger, "guidelines", [{"course": "FX.101", "guideline_id": "G4", "kind": "homework_analogous",
+                                          "applies_to_exam_type": "final", "from_session": None, "to_session": None,
+                                          "share": None, "source_term": "2022F", "source_term_seq": 20223,
+                                          "source_session": 1, "text": "Exam problems are analogous to homework.",
+                                          "source_url": None}], mode="upsert")
+    assert [sc.homework_analogous_verdict(v) for v in (0.5, 0.49, 0.3, 0.29)] == ["match", "partial", "partial", "miss"]
+    assert seal_run(tmp_path, capsys, "r7-" + FINAL22, FINAL22, full_signals())[0] == 0
+    assert seal_run(tmp_path, capsys, "r8-" + FINAL22, FINAL22, full_signals(), "--cold-start")[0] == 0
+    # 60 of 100 points on T00; every predicted topic has a visible pset (due sessions 3..18) -> observed 0.4
+    key = "exam_id,problem,sub,points,topic_ids,labeled_by,labeled_at\n" + "".join(
+        f"{FINAL22},{n},,20,{t},t,\n" for n, t in ((1, "T00"), (2, "T00"), (3, "T00"), (4, "T08"), (5, "T02")))
+    _sealed_key(tmp_path, monkeypatch, FINAL22, key)
+    code, scored = cli(sc, ["--run-id", "r7-" + FINAL22], capsys)
+    assert code == 0 and scored["guideline_tests"] == [{"guideline_id": "G4", "observed_share": 0.4,
+                                                        "verdict": "partial"}]
+    code, twin = cli(sc, ["--run-id", "r8-" + FINAL22], capsys)
+    assert code == 0 and twin["guideline_tests"] == [] and "cold-start twin" in twin["guideline_tests_note"]
+    rows = be.query(ledger, "SELECT * FROM {{guideline_tests}}")
+    assert rows[["guideline_id", "run_id", "predicted_share", "observed_share", "verdict"]].values.tolist() == \
+        [["G4", "r7-" + FINAL22, 0.5, 0.4, "partial"]]
 
 
 def test_invalid_answer_key_exit_3(lab, tmp_path, capsys, monkeypatch):

@@ -21,6 +21,7 @@
   "made_at": "2026-09-11T09:00:00-07:00",
   "run_id": "r0-FX.101-final-2022F",
   "schema_version": 1,
+  "standardization": "zscore_per_run_v1",
   "target_exam": "FX.101-final-2022F",
   "topics": [
     {

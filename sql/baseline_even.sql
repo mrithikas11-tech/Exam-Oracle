@@ -1,5 +1,5 @@
 -- Baseline A, "study evenly".  Spec: kit/02-product/prediction-model.md "Scoring": rank topics by x4
--- (lecture time), take the top K. Full feature set only.
+-- (lecture time), take the top K. Run for every target (D3); an exam_history target lists nothing.
 --
 --   score(t) = x4(t) (same window and formula as x4_lecture_time.sql)
 --   order    = score DESC, topic_id ASC;  rank_and_seal keeps the first K.

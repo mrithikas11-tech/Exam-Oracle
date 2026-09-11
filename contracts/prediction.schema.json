@@ -16,6 +16,10 @@
     "made_at": { "type": "string", "description": "ISO-8601 timestamp with UTC offset" },
     "lessons_run_seq": { "type": ["integer", "null"], "description": "Lessons version used; null = cold-start weights" },
     "k": { "type": "integer", "minimum": 1 },
+    "standardization": {
+      "enum": ["zscore_per_run_v1"],
+      "description": "How the signals enter p. zscore_per_run_v1 (D5): each of x1..x7 is z-scored across THIS prediction's topics (population std; a signal with zero variance gives 0 for every topic), then p = sigma(intercept + sum_k w_k * z_k). The topics' `signals` keep the RAW x values. Absent: p = sigma(intercept + sum_k w_k * x_k) on the raw values."
+    },
     "weights": {
       "type": "object",
       "description": "The beta weights used for this prediction (the lessons)",
@@ -30,7 +34,7 @@
     "topics": {
       "type": "array",
       "minItems": 1,
-      "description": "Every topic in the course's fixed list, sorted by rank ascending",
+      "description": "Every predictable topic of the course's fixed list, sorted by rank ascending. The off-list bucket T00 is never listed (D6): it is never ranked or predicted, but answer-key points on it stay in the scoring denominator",
       "items": {
         "type": "object",
         "additionalProperties": false,
